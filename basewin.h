@@ -3,7 +3,7 @@ using namespace std;
 template <class DERIVED_TYPE>
 #define NOTIFICATION_TRAY_ICON_MSG (WM_USER + 0x100)
 #define WM_QR_CODE (WM_USER + 0x110)
-#define ID_EXIT		40001
+#define ID_EXIT     40001
 
 class BaseWindow
 {
@@ -75,27 +75,27 @@ public:
     HWND Window() const { return m_hwnd; }
 
 
-	static void WriteLog(const char* format,...)
-	{
-		char  buf[1024];
+    static void WriteLog(const char* format,...)
+    {
+        char  buf[1024];
 
-	    va_list p;
-		va_start(p, format);
-		vsprintf(buf, format, p);
-		va_end(p);
+        va_list p;
+        va_start(p, format);
+        vsprintf(buf, format, p);
+        va_end(p);
 
-		const char* path = "log.txt";
-		FILE *stream;
-		if ((stream = fopen(path, "a+")) == NULL)
-		{
-			MessageBox(0, L"Could not create/open a file", L"Error", 16);
-			return ;
-		}
-		//fprintf(stream, "%s\n", buffer);
-		//fseek(stream, 0L, SEEK_END);
-		fprintf(stream, "%s\n", buf);
-		fclose(stream);
-	}
+        const char* path = "log.txt";
+        FILE *stream;
+        if ((stream = fopen(path, "a+")) == NULL)
+        {
+            MessageBox(0, L"Could not create/open a file", L"Error", 16);
+            return ;
+        }
+        //fprintf(stream, "%s\n", buffer);
+        //fseek(stream, 0L, SEEK_END);
+        fprintf(stream, "%s\n", buf);
+        fclose(stream);
+    }
 protected:
 
     virtual PCWSTR  ClassName() const = 0;
