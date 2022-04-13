@@ -1,11 +1,8 @@
 #include <windows.h>
-#include <windowsx.h>
 #include <winuser.h>
 #include <vector>
-#include <tuple>
 #include "qrcodegen.h"
 #include "basewin.h"
-#include "resource1.h"
 using std::vector;
 using std::tuple;
 using namespace std;
@@ -311,7 +308,7 @@ void MainWindow::GetClipboardTextW(int codePage)
 {
     //清空分页
     txtPages.clear();
-
+    pageIndex = -1;
     // Try opening the clipboard
     if (!OpenClipboard(nullptr))
         return;
@@ -387,7 +384,7 @@ void  MainWindow::PreviousPage()
 //按右箭头<-键，查看后页二维码
 void  MainWindow::NextPage()
 {
-    if (pageIndex < txtPages.size() - 1)
+    if (pageIndex < txtPages.size() - 1 && pageIndex >= 0)
     {
         pageIndex++;
         getMaskCode(txtPages[pageIndex].c_str(), 0);
@@ -401,13 +398,13 @@ void ToTray(HWND hWnd)
     nid.uID = 1;
     nid.uFlags = NIF_ICON | NIF_MESSAGE ;
     nid.uCallbackMessage = NOTIFICATION_TRAY_ICON_MSG;//自定义的消息 处理托盘图标事件
-    nid.hIcon = static_cast<HICON>(LoadImage(GetModuleHandle(0),
-        //TEXT("icon1.ico"),
-        MAKEINTRESOURCE(IDI_ICON1),
+    nid.hIcon = static_cast<HICON>(LoadImage(NULL,
+        TEXT("icon1.ico"),
+        //MAKEINTRESOURCE(IDI_ICON1),
         IMAGE_ICON,
         0, 0,
-        //LR_DEFAULTCOLOR | LR_SHARED | LR_DEFAULTSIZE | LR_LOADFROMFILE));
-        LR_DEFAULTSIZE));
+        LR_DEFAULTCOLOR | LR_SHARED | LR_DEFAULTSIZE | LR_LOADFROMFILE));
+        //LR_DEFAULTSIZE));
 
 
     hTrayMenu = CreatePopupMenu();//生成托盘菜单
@@ -434,11 +431,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
     g_hWnd = win.Window();
     SetWindowPos(win.Window(), HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE); //|
 
-    HICON hIcon = static_cast<HICON>(LoadImage(GetModuleHandle(0),
-        MAKEINTRESOURCE(IDI_ICON1),
+    HICON hIcon = static_cast<HICON>(LoadImage(NULL,
+        TEXT("icon1.ico"),
+        //MAKEINTRESOURCE(IDI_ICON1),
         IMAGE_ICON,
         0, 0,
-        LR_DEFAULTSIZE));
+        LR_DEFAULTCOLOR | LR_SHARED | LR_DEFAULTSIZE | LR_LOADFROMFILE));
+        //LR_DEFAULTSIZE));
 
     SendMessage(win.Window(), WM_SETICON, ICON_BIG, (LPARAM)hIcon);
     //SendMessage(win.Window(), WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
