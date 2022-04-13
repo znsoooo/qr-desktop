@@ -173,17 +173,18 @@ public:
         GetClientRect(m_hwnd, &rc);
         FillRect(hMemDC, &rc, hBrushWhite);
 
-        int unitX = rc.right / (qr.getSize() + 2 * border);
-        int unitY = rc.bottom / (qr.getSize() + 2 * border);
+        int size = qr.getSize();
+        int unitX = rc.right  / (size + 2 * border);
+        int unitY = rc.bottom / (size + 2 * border);
 
         //char info[256];
         //sprintf(info, "rc=(%d,%d,%d,%d),qr.size=%d,unitX=%d,unitY=%d\n",rc.left,rc.top,rc.right,rc.bottom,qr.getSize(),unitX,unitY);
         //OutputDebugStringA(info);
 
-        for (int y = 0; y < qr.getSize(); y ++) {
-            for (int x = 0; x < qr.getSize(); x++) {
-                int rx = x * unitX + (rc.right - unitX * qr.getSize()) / 2;
-                int ry = y * unitY + (rc.bottom - unitY * qr.getSize()) / 2;
+        for (int y = 0; y < size; y ++) {
+            for (int x = 0; x < size; x++) {
+                int rx = x * unitX + (rc.right - unitX * size) / 2;
+                int ry = y * unitY + (rc.bottom - unitY * size) / 2;
 
                 RECT rectSegment{rx,ry,rx + unitX,ry + unitY };
 
@@ -204,6 +205,7 @@ public:
         GetClientRect(m_hwnd, &rc);
         FillRect(hMemDC, &rc, hBrushWhite);
 
+        int size = qr.getSize();
         int unitX = 2;
         int unitY = 2;
 
@@ -211,10 +213,10 @@ public:
         //sprintf(info, "rc=(%d,%d,%d,%d),qr.size=%d,unitX=%d,unitY=%d\n",rc.left,rc.top,rc.right,rc.bottom,qr.getSize(),unitX,unitY);
         //OutputDebugStringA(info);
 
-        for (int y = 0; y < qr.getSize(); y++) {
-            for (int x = 0; x < qr.getSize(); x++) {
-                int rx = x * unitX + (rc.right - unitX * qr.getSize()) / 2;
-                int ry = y * unitY + (rc.bottom - unitY * qr.getSize()) / 2;
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                int rx = x * unitX + (rc.right - unitX * size) / 2;
+                int ry = y * unitY + (rc.bottom - unitY * size) / 2;
 
                 RECT rectSegment{ rx,ry,rx + unitX,ry + unitY };
 
@@ -257,7 +259,7 @@ void MainWindow::OnPaint()
     BeginPaint(m_hwnd, &ps);
 
     //绘制二维码
-    printQr2(qrCode,hDC,memDC);
+    printQr2(qrCode, hDC, memDC);
 
     EndPaint(m_hwnd, &ps);
     DeleteObject(m_hBitMap);
@@ -381,7 +383,7 @@ void  MainWindow::PreviousPage()
         getMaskCode(txtPages[pageIndex].c_str(), 0);
     }
 }
-//按右箭头<-键，查看后页二维码
+//按右箭头->键，查看后页二维码
 void  MainWindow::NextPage()
 {
     if (pageIndex < txtPages.size() - 1 && pageIndex >= 0)
@@ -423,7 +425,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 {
     MainWindow win;
 
-    if (!win.Create(L"QR CODE", WS_OVERLAPPED | WS_SYSMENU))// WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU
+    if (!win.Create(L"QR Desktop v0.1.1", WS_OVERLAPPED | WS_SYSMENU))// WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU
     {
         return 0;
     }
@@ -443,7 +445,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
     //SendMessage(win.Window(), WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 
     if (!RegisterHotKey(win.Window(), 1, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, 0x51))
-        MessageBox(win.Window(), L"注册热键失败", L"提示", MB_OK);
+        MessageBox(win.Window(), L"regist hotkey failed.", L"Error", MB_OK);
 
     if (!SetHook())
         ;
@@ -627,7 +629,7 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         }
     case WM_GETMINMAXINFO:
         MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
-        mmi->ptMinTrackSize.x = 21 * 2 + 4*2*2;//最小宽度 21格加4格边框
+        mmi->ptMinTrackSize.x = 21 * 2 + 4 * 2 * 2; // 最小宽度 21格加4格边框
         return 0;
     }
     }
