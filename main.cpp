@@ -101,8 +101,6 @@ class MainWindow : public BaseWindow<MainWindow>
     std::string  clipboardText;
     vector<string> txtPages;
     int     pageIndex = 0;
-    void    PreviousPage();
-    void    NextPage();
 
     void    GetClipboardTextW(int codePage);
     void    UpdateClientSize();
@@ -119,9 +117,8 @@ public:
     PCWSTR  ClassName() const { return L"QR Code Class"; }
     LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-    void  makeQr(const char* text) {
-        if (text == NULL)
-            return;
+    void  makeQrPage(int page) {
+        const char* text = txtPages[page].c_str();
         qrCode = QrCode::encodeText(text, QrCode::Ecc::MEDIUM);
         UpdateClientSize();
     }
@@ -268,26 +265,6 @@ void MainWindow::GetClipboardTextW(int codePage)
     CloseClipboard();
 }
 
-//按左箭头<-键，查看前页二维码
-void  MainWindow::PreviousPage()
-{
-    if (pageIndex > 0 && txtPages.size() > 1)
-    {
-        pageIndex--;
-        makeQr(txtPages[pageIndex].c_str());
-    }
-}
-
-//按右箭头->键，查看后页二维码
-void  MainWindow::NextPage()
-{
-    if (pageIndex < txtPages.size() - 1 && pageIndex >= 0)
-    {
-        pageIndex++;
-        makeQr(txtPages[pageIndex].c_str());
-    }
-}
-
 //生成托盘
 void ToTray(HWND hWnd)
 {
@@ -432,7 +409,7 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         GetClipboardTextW(CP_ACP);
         //文本转二维码过程
         if(txtPages.size() > 0)
-            makeQr(txtPages[0].c_str());
+            makeQrPage(0);
 
         InvalidateRect(m_hwnd, NULL, TRUE);
 
@@ -486,11 +463,13 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_QR_CODE:
-        if (wParam == 0)//前一页
-            PreviousPage();
-        else //后一页
-            NextPage();
-        //重画窗口
+        // 按左箭头<-键查看前一页
+        if (!wParam && 0 < pageIndex && pageIndex < txtPages.size())
+            makeQrPage(--pageIndex);
+        // 按右箭头->键查看后一页
+        if (wParam && -1 < pageIndex && pageIndex < txtPages.size() - 1)
+            makeQrPage(++pageIndex);
+        // 重画窗口
         InvalidateRect(m_hwnd, NULL, TRUE);
         return 0;
 
