@@ -230,11 +230,10 @@ void MainWindow::GetClipboardTextW(int codePage)
     }
     size_t size = GlobalSize(hData);
 
-    int totalBytes = WideCharToMultiByte(codePage, 0, pwstr, -1, 0, 0, NULL, NULL);
-    int a = totalBytes / QR_PAGE_SIZE;
-    int b = (totalBytes % QR_PAGE_SIZE) == 0 ? 0 : 1;
-    int avgPageSize = totalBytes / (a + b); //实际估算每页字节数
-    int remain = totalBytes % (a + b); //按每页avgPageSize计算，剩余字节，
+    int total = WideCharToMultiByte(codePage, 0, pwstr, -1, 0, 0, NULL, NULL);
+    int pages = 1 + (total - 1) / QR_PAGE_SIZE;
+    int average = total / pages; //实际估算每页字节数
+    int remain  = total % pages; //按每页average计算剩余字节
     //WriteLog("totalBytes=%d,pagecount=%d,avgPageSize=%d,remain=%d", totalBytes, a + b, avgPageSize, remain);
     // 分页保存文本
     int wLen = 0;
@@ -242,11 +241,11 @@ void MainWindow::GetClipboardTextW(int codePage)
     do {
         //逐个宽字符累计长度
         int c = WideCharToMultiByte(codePage, 0, pwstr++, 1, 0, 0, NULL, NULL);
+        total -= c;
         chLen += c;
-        totalBytes-=c;
         wLen++;
-        //前面remain页每页加一个字节，接近平均
-        if (chLen >= (txtPages.size() < remain ? avgPageSize+1 : avgPageSize) || totalBytes == 0)
+        //前面remain页每页多一个字节，接近平均
+        if (chLen >= average + (txtPages.size() < remain) || total == 0)
         {
             char segment[chLen + 1];
             ::WideCharToMultiByte(codePage, 0, pwstr - wLen, -1, segment, chLen, NULL, NULL);
@@ -255,7 +254,7 @@ void MainWindow::GetClipboardTextW(int codePage)
             chLen = 0;
             wLen = 0;
         }
-    } while (totalBytes > 0);
+    } while (total > 0);
 
     //for(int k=0;k<txtPages.size() ;k++)
     //  WriteLog("P%d = %d,",k,txtPages[k].length());
