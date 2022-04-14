@@ -103,7 +103,7 @@ class MainWindow : public BaseWindow<MainWindow>
     int     pageIndex = 0;
 
     void    GetClipboardTextW(int codePage);
-    void    UpdateClientSize();
+    void    UpdateWindowSize();
 
     //切换显示状态
     void    SwitchWindow();
@@ -120,7 +120,7 @@ public:
     void  makeQrPage(int page) {
         const char* text = txtPages[page].c_str();
         qrCode = QrCode::encodeText(text, QrCode::Ecc::MEDIUM);
-        UpdateClientSize();
+        UpdateWindowSize();
     }
 
     void printQr(const QrCode &qr, HDC hdc, HDC hMemDC) {
@@ -344,34 +344,23 @@ void MainWindow::SwitchWindow()
     ShowWindow(m_hwnd, g_show ? SW_SHOW : SW_HIDE);
 }
 
-void MainWindow::UpdateClientSize()
+void MainWindow::UpdateWindowSize()
 {
-    //根据文本大小调整窗口大小
-    RECT rcWindow;                //整个窗口的大小
-    RECT rcClient;                //客户区大小
-    int borderWidth, borderHeight;//非客户区大小
+    // 获取当前窗口大小
+    RECT rw; GetWindowRect(m_hwnd, &rw);
 
-    GetWindowRect(m_hwnd, &rcWindow);
-    GetClientRect(m_hwnd, &rcClient);
-    borderWidth = (rcWindow.right - rcWindow.left)
-                - (rcClient.right - rcClient.left);
-    borderHeight = (rcWindow.bottom - rcWindow.top)
-                 - (rcClient.bottom - rcClient.top);
-
+    // 计算更新窗口大小
     int width = qrCode.getSize() * 2 + 4 * 2;
-    /*char info[256];
-    sprintf(info, "win=(%d,%d,%d,%d),win=(%d,%d,%d,%d),width=%d,border_width=%d,border_height=%d,qrsize=%d",
-        rcWindow.left, rcWindow.top, rcWindow.right, rcWindow.bottom,
-        rcClient.left, rcClient.top, rcClient.right, rcClient.bottom,
-        width,borderWidth,borderHeight,
-        qrCode.getSize());
-    OutputDebugStringA(info);*/
     RECT r{0, 0, width, width};
     AdjustWindowRect(&r, GetWindowLong(m_hwnd, GWL_STYLE), FALSE);
 
-    SetWindowPos(m_hwnd, 0, r.left, r.top,
+    // 居中放大窗口
+    SetWindowPos(m_hwnd, 0,
+        ((rw.right + rw.left) - (r.right - r.left)) / 2,
+        ((rw.bottom + rw.top) - (r.bottom - r.top)) / 2,
         r.right - r.left,
-        r.bottom - r.top, SWP_NOMOVE | SWP_NOZORDER);
+        r.bottom - r.top,
+        SWP_NOZORDER);
 }
 
 LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
