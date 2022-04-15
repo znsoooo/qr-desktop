@@ -360,7 +360,7 @@ void MainWindow::UpdateWindowSize()
         ((rw.bottom + rw.top) - (r.bottom - r.top)) / 2,
         r.right - r.left,
         r.bottom - r.top,
-        SWP_NOZORDER);
+        SWP_NOZORDER | SWP_NOACTIVATE); // 不捕获窗口热点
 }
 
 LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
