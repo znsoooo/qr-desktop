@@ -29,27 +29,24 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
     KBDLLHOOKSTRUCT* pkh = (KBDLLHOOKSTRUCT*)lParam;
 
     //HC_ACTION: wParam 和lParam参数包含了键盘按键消息
-    if (nCode == HC_ACTION)
+    if (nCode == HC_ACTION && wParam != WM_KEYUP) // CTRL: WM_KEYDOWN/WM_KEYUP, ALT: WM_SYSKEYDOWN/WM_KEYUP
     {
-        //判断函数调用时指定虚拟键的状态
-        //BOOL bCtrlKey = ::GetAsyncKeyState(VK_CONTROL) & 0x8000;
-        //BOOL bCtrlKey = ::GetAsyncKeyState(VK_CONTROL) >> ((sizeof(SHORT) * 8) - 1);
+        switch (pkh->vkCode)
+        {
+            case VK_LEFT:
+            case VK_UP:
+            case VK_PRIOR:
+            case VK_LCONTROL:
+                SendMessage(g_hWnd, WM_QR_CODE, 0, 0);
+                break;
 
-        //是否按下CTRL 、ALT、SHIFT
-        BOOL bFuncKey = (::GetAsyncKeyState(VK_CONTROL) >> ((sizeof(SHORT) * 8) - 1))
-            || (pkh->flags & LLKHF_ALTDOWN)
-            || (::GetAsyncKeyState(VK_SHIFT) & 0x8000);
-
-        //KEYUP 或 KEYDOWN都触发HC_ACTION，取其中一个处理
-        if (!bFuncKey && VK_LEFT == pkh->vkCode && wParam == WM_KEYUP)
-            SendMessage(g_hWnd, WM_QR_CODE, 0, 0);
-
-        else if (!bFuncKey && VK_RIGHT == pkh->vkCode  && wParam == WM_KEYUP)
-            SendMessage(g_hWnd, WM_QR_CODE, 1, 0);
-
-        /*else if ((::GetAsyncKeyState(VK_CONTROL) >> ((sizeof(SHORT) * 8) - 1))
-            && (pkh->flags & LLKHF_ALTDOWN) && ::GetAsyncKeyState(0x51))
-            ShowWindow(g_hWnd, SW_SHOW);*/
+            case VK_RIGHT:
+            case VK_DOWN:
+            case VK_NEXT:
+            case VK_LMENU:
+                SendMessage(g_hWnd, WM_QR_CODE, 1, 0);
+                break;
+        }
     }
 
     // Call next hook in chain
