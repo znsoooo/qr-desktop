@@ -219,34 +219,34 @@ bool MainWindow::GetClipboardTextW(int codePage)
     txtLen = wcslen(pwstr);
     txtPages.clear();
 
-    int total = WideCharToMultiByte(codePage, 0, pwstr, -1, 0, 0, NULL, NULL);
+    int total = WideCharToMultiByte(codePage, 0, pwstr, -1, 0, 0, NULL, NULL) - 1; // 尾部多一个 \0
     int pages = 1 + (total - 1) / QR_PAGE_SIZE;
     int average = total / pages; //实际估算每页字节数
     int remain  = total % pages; //按每页average计算剩余字节
-    //WriteLog("totalBytes=%d,pagecount=%d,avgPageSize=%d,remain=%d", totalBytes, a + b, avgPageSize, remain);
+
     // 分页保存文本
+    char segment[QR_PAGE_SIZE + 8];
     int wLen = 0;
     int chLen = 0;
+    int target = average + (txtPages.size() < remain);
     do {
         //逐个宽字符累计长度
         int c = WideCharToMultiByte(codePage, 0, pwstr++, 1, 0, 0, NULL, NULL);
-        total -= c;
         chLen += c;
         wLen++;
-        //前面remain页每页多一个字节，接近平均
-        if (chLen >= average + (txtPages.size() < remain) || total == 0)
+        if (chLen >= target)
         {
-            char segment[chLen + 1];
-            ::WideCharToMultiByte(codePage, 0, pwstr - wLen, -1, segment, chLen, NULL, NULL);
-            segment[chLen] = 0;
+            int c2 = WideCharToMultiByte(codePage, 0, pwstr - wLen, wLen, segment, QR_PAGE_SIZE + 8, NULL, NULL);
+            segment[c2] = 0; // c2总是小于QR_PAGE_SIZE+8
             txtPages.push_back(segment);
-            chLen = 0;
+            target += average + (txtPages.size() < remain); // 前面remain页每页多一个字节，接近平均
             wLen = 0;
         }
-    } while (total > 0);
+    } while (*pwstr);
 
+    //WriteLog("\ntotal: %d", total);
     //for(int k=0;k<txtPages.size() ;k++)
-    //  WriteLog("P%d = %d,",k,txtPages[k].length());
+    //  WriteLog("P%d = %d,", k, txtPages[k].length());
 
     pageIndex = 0;
 
