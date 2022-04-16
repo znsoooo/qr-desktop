@@ -308,10 +308,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 {
     MainWindow win;
 
-    if (!win.Create(QR_TITLE, WS_OVERLAPPED | WS_SYSMENU))// WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU
-    {
+    if (!win.Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_DLGMODALFRAME)) // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
         return 0;
-    }
 
     g_hWnd = win.Window();
     SetWindowPos(win.Window(), HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
@@ -324,7 +322,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
         LR_DEFAULTCOLOR | LR_SHARED | LR_DEFAULTSIZE | LR_LOADFROMFILE));
         //LR_DEFAULTSIZE));
 
-    SendMessage(win.Window(), WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+    //SendMessage(win.Window(), WM_SETICON, ICON_BIG, (LPARAM)hIcon);
     //SendMessage(win.Window(), WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 
     if (!RegisterHotKey(win.Window(), 1, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, 'Q'))
