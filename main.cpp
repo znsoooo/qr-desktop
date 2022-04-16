@@ -8,7 +8,7 @@ using std::tuple;
 using namespace std;
 using namespace qrcodegen;
 
-
+#define    QR_TITLE       L"QR Desktop 0.1.1"
 const int  QR_PAGE_SIZE = 600; //300 字节为一页
 
 
@@ -101,6 +101,7 @@ class MainWindow : public BaseWindow<MainWindow>
     std::string  clipboardText;
     vector<string> txtPages;
     int     pageIndex = 0;
+    int     txtLen = 0;
 
     void    GetClipboardTextW(int codePage);
     void    UpdateWindowSize();
@@ -121,6 +122,17 @@ public:
         const char* text = txtPages[page].c_str();
         qrCode = QrCode::encodeText(text, QrCode::Ecc::MEDIUM);
         UpdateWindowSize();
+
+        // 生成窗口标题
+        wchar_t info[256];
+        if (txtPages.size() == 1)
+            wsprintf(info, L"%d - %s", txtLen, QR_TITLE);
+        else
+            wsprintf(info, L"%d (%d/%d) - %s", txtLen, page + 1, txtPages.size(), QR_TITLE);
+        info[255] = 0;
+
+        // 设置窗口标题
+        SetWindowText(m_hwnd, info);
     }
 
     void printQr(const QrCode &qr, HDC hdc, HDC hMemDC) {
@@ -225,7 +237,7 @@ void MainWindow::GetClipboardTextW(int codePage)
         CloseClipboard();
         return;
     }
-    size_t size = GlobalSize(hData);
+    txtLen = wcslen(pwstr);
 
     int total = WideCharToMultiByte(codePage, 0, pwstr, -1, 0, 0, NULL, NULL);
     int pages = 1 + (total - 1) / QR_PAGE_SIZE;
@@ -297,7 +309,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 {
     MainWindow win;
 
-    if (!win.Create(L"QR Desktop v0.1.1", WS_OVERLAPPED | WS_SYSMENU))// WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU
+    if (!win.Create(QR_TITLE, WS_OVERLAPPED | WS_SYSMENU))// WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU
     {
         return 0;
     }
