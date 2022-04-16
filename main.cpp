@@ -453,11 +453,8 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_HOTKEY:
-        if (LOWORD(lParam) == (MOD_CONTROL | MOD_ALT) && HIWORD(lParam) == 'Q') // CTRL + ALT + Q
-        {
-            SwitchWindow();
-            break;
-        }
+        SwitchWindow();
+        break;
 
     case WM_GETMINMAXINFO:
         MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
