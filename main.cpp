@@ -87,12 +87,8 @@ class MainWindow : public BaseWindow<MainWindow>
     HBRUSH  hBrushBlack = CreateSolidBrush(RGB(0, 0, 0));
     HBRUSH  hBrushWhite = CreateSolidBrush(RGB(255, 255, 255));
 
-    void    CalculateLayout() { };
     void    OnPaint();
     void    Resize();
-    void    OnLButtonDown(int pixelX, int pixelY, DWORD flags);
-    void    OnLButtonUp();
-    void    OnMouseMove(int pixelX, int pixelY, DWORD flags);
 
     //剪切板
     std::string  clipboardText;
@@ -162,19 +158,6 @@ public:
             }
         }
         BitBlt(hdc, 0, 0, rc.right, rc.bottom, hMemDC, 0, 0, SRCCOPY);
-    }
-
-    void WINAPI SetAutoView(HWND hwnd)
-    {
-        static UINT auPriorityList[] = {
-            CF_TEXT
-        };
-
-        uFormat = GetPriorityClipboardFormat(auPriorityList, 1);
-        fAuto = TRUE;
-
-        InvalidateRect(hwnd, NULL, TRUE);
-        UpdateWindow(hwnd);
     }
 
 };
