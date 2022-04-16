@@ -103,7 +103,7 @@ class MainWindow : public BaseWindow<MainWindow>
     int     pageIndex = 0;
     int     txtLen = 0;
 
-    void    GetClipboardTextW(int codePage);
+    bool    GetClipboardTextW(int codePage);
     void    UpdateWindowSize();
 
     //切换显示状态
@@ -210,21 +210,18 @@ void MainWindow::Resize()
     InvalidateRect(m_hwnd, NULL, FALSE);
 }
 
-void MainWindow::GetClipboardTextW(int codePage)
+bool MainWindow::GetClipboardTextW(int codePage)
 {
-    //清空分页
-    txtPages.clear();
-    pageIndex = -1;
     // Try opening the clipboard
     if (!OpenClipboard(nullptr))
-        return;
+        return false;
 
     // Get handle of clipboard object for ANSI text
     HANDLE hData = GetClipboardData(CF_UNICODETEXT);
     if (hData == nullptr)
     {
         CloseClipboard();
-        return;
+        return false;
     }
 
     // Lock the handle to get the actual text pointer
@@ -235,9 +232,12 @@ void MainWindow::GetClipboardTextW(int codePage)
     {
         GlobalUnlock(hData);
         CloseClipboard();
-        return;
+        return false;
     }
+
+    // 清空分页
     txtLen = wcslen(pwstr);
+    txtPages.clear();
 
     int total = WideCharToMultiByte(codePage, 0, pwstr, -1, 0, 0, NULL, NULL);
     int pages = 1 + (total - 1) / QR_PAGE_SIZE;
@@ -275,6 +275,8 @@ void MainWindow::GetClipboardTextW(int codePage)
 
     // Release the clipboard
     CloseClipboard();
+
+    return true;
 }
 
 //生成托盘
@@ -407,9 +409,7 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_DRAWCLIPBOARD:  // clipboard contents changed.
         //系统是UTF-16，转换可选CP_ACP（相当于转GBK） 或 CP_UTF8（无损转换)
-        GetClipboardTextW(CP_ACP);
-        //文本转二维码过程
-        if(txtPages.size() > 0)
+        if(GetClipboardTextW(CP_ACP))
             makeQrPage(0);
 
         InvalidateRect(m_hwnd, NULL, TRUE);
