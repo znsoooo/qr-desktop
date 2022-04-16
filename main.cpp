@@ -97,14 +97,13 @@ class MainWindow : public BaseWindow<MainWindow>
     int     txtLen = 0;
 
     bool    GetClipboardTextW(int codePage);
-    void    UpdateWindowSize();
-
-    //切换显示状态
-    void    SwitchWindow();
 
     QrCode qrCode = QrCode::encodeText("Hello!", QrCode::Ecc::MEDIUM);
 
 public:
+
+    void    SwitchWindow();
+    void    UpdateWindowSize();
 
     MainWindow() {}
 
@@ -314,6 +313,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
     if (!SetHook())
         ;
 
+    win.UpdateWindowSize();
     ShowWindow(win.Window(), nCmdShow);
     g_show = 1;
     ToTray(g_hWnd);
