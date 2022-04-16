@@ -444,9 +444,9 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 //EnableMenuItem(hMenu, ID_SHOW, MF_GRAYED);
 
                 //显示并获取选中的菜单
-                int cmd = TrackPopupMenu(hTrayMenu, TPM_RETURNCMD, pt.x, pt.y, NULL, m_hwnd, NULL);
+                int cmd = TrackPopupMenu(hTrayMenu, TPM_RETURNCMD, pt.x, pt.y, 0, m_hwnd, 0);
                 if (cmd == ID_EXIT)
-                    PostMessage(m_hwnd, WM_DESTROY, NULL, NULL);
+                    PostMessage(m_hwnd, WM_DESTROY, 0, 0);
             }
 
             case WM_CONTEXTMENU:
