@@ -20,7 +20,7 @@ NOTIFYICONDATA nid;
 HMENU      hTrayMenu;
 
 HHOOK      g_Hook;         // Handler of hook
-bool       g_show = 0;     // 界面显示状态
+bool       g_show = 1;     // 界面显示状态
 
 
 /***********  键盘钩子消息处理 *********************/
@@ -314,9 +314,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
         ;
 
     win.UpdateWindowSize();
-    ShowWindow(win.Window(), nCmdShow);
-    g_show = 1;
-    ToTray(g_hWnd);
+    ShowWindow(win.Window(), g_show);
+    if (g_show)
+        ToTray(g_hWnd);
 
     // Run the message loop.
     MSG msg = { };
