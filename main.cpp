@@ -29,7 +29,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
     KBDLLHOOKSTRUCT* pkh = (KBDLLHOOKSTRUCT*)lParam;
 
     //HC_ACTION: wParam 和lParam参数包含了键盘按键消息
-    if (nCode == HC_ACTION && wParam != WM_KEYUP) // CTRL: WM_KEYDOWN/WM_KEYUP, ALT: WM_SYSKEYDOWN/WM_KEYUP
+    if (nCode == HC_ACTION && wParam != WM_KEYUP && g_show) // CTRL: WM_KEYDOWN/WM_KEYUP, ALT: WM_SYSKEYDOWN/WM_KEYUP
     {
         switch (pkh->vkCode)
         {
