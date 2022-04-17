@@ -48,6 +48,25 @@ public:
         HMENU hMenu = 0
         )
     {
+
+        // Make parent window.
+
+        WNDCLASS wc_p = {0};
+
+        wc_p.lpfnWndProc   = DefWindowProc;
+        wc_p.hInstance     = GetModuleHandle(NULL);
+        wc_p.lpszClassName = L"QR Parent Class";
+
+        RegisterClass(&wc_p);
+
+        HWND p_hwnd = CreateWindowEx(
+            dwExStyle, L"QR Parent Class", L"QR PARENT", dwStyle, 100, 100,
+            300, 200, hWndParent, hMenu, NULL, 0
+        );
+
+
+        // Make child window. (No icon in status bar)
+
         WNDCLASS wc = {0};
 
         wc.lpfnWndProc   = DERIVED_TYPE::WindowProc;
@@ -56,17 +75,12 @@ public:
 
         RegisterClass(&wc);
 
-        /*m_hwnd = CreateWindowEx(
-            dwExStyle, ClassName(), lpWindowName, dwStyle, x, y,
-            nWidth, nHeight, hWndParent, hMenu, GetModuleHandle(NULL), this
-            );*/
-
         RECT rc = { 0, 0, 192, 192 };
         AdjustWindowRect(&rc, dwStyle, FALSE);
 
         m_hwnd = CreateWindowEx(
             dwExStyle, ClassName(), lpWindowName, dwStyle, x, y,
-            rc.right-rc.left,rc.bottom-rc.top, hWndParent, hMenu, GetModuleHandle(NULL), this
+            rc.right-rc.left,rc.bottom-rc.top, p_hwnd, hMenu, GetModuleHandle(NULL), this
         );
 
         return (m_hwnd ? TRUE : FALSE);
