@@ -112,7 +112,9 @@ public:
 
     void  makeQrPage(int page) {
         const char* text = txtPages[page].c_str();
-        qrCode = QrCode::encodeText(text, QrCode::Ecc::MEDIUM);
+        std::vector<QrSegment> segs = QrSegment::makeSegments(text);
+        qrCode = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
+
         UpdateWindowSize();
 
         // 生成窗口标题
