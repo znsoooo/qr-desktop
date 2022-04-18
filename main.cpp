@@ -209,7 +209,7 @@ bool MainWindow::GetClipboardTextW(int codePage)
     // char * pszText = static_cast<char*>(GlobalLock(hData));
 
     wchar_t * pwstr = (wchar_t*)GlobalLock(hData);
-    if (pwstr == nullptr)
+    if (pwstr == nullptr || !*pwstr) // 或剪切板文本为空
     {
         GlobalUnlock(hData);
         CloseClipboard();
