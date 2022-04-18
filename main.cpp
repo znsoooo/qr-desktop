@@ -460,7 +460,7 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_GETMINMAXINFO:
         MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
-        mmi->ptMinTrackSize.x = 21 * 2 + 4 * 2 * 2; // 最小宽度 21格加4格边框
+        mmi->ptMinTrackSize.x = 10; // 覆盖默认最小尺寸限制
         return 0;
     }
     return DefWindowProc(m_hwnd, uMsg, wParam, lParam);
