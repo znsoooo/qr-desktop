@@ -1,6 +1,7 @@
 @echo off
 taskkill /f /im qrcode.exe
-g++ -o qrcode.exe qrcodegen.cpp main.cpp -m32 -s -static -DWINVER=0x0A00 -DUNICODE  -mwindows -municode
+windres -i icon.rc -o icon.o -F pe-i386
+g++ main.cpp qrcodegen.cpp icon.o -o qrcode.exe -m32 -s -static -DUNICODE -mwindows -municode
 upx -9 qrcode.exe
 start qrcode.exe
 pause

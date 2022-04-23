@@ -268,13 +268,7 @@ void ToTray(HWND hWnd)
     nid.uID = 1;
     nid.uFlags = NIF_ICON | NIF_MESSAGE ;
     nid.uCallbackMessage = NOTIFICATION_TRAY_ICON_MSG;//自定义的消息 处理托盘图标事件
-    nid.hIcon = static_cast<HICON>(LoadImage(NULL,
-        TEXT("icon1.ico"),
-        //MAKEINTRESOURCE(IDI_ICON1),
-        IMAGE_ICON,
-        0, 0,
-        LR_DEFAULTCOLOR | LR_SHARED | LR_DEFAULTSIZE | LR_LOADFROMFILE));
-        //LR_DEFAULTSIZE));
+    nid.hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(101));
 
     hTrayMenu = CreatePopupMenu();//生成托盘菜单
     AppendMenu(hTrayMenu, MF_STRING, ID_EXIT, TEXT("Exit"));
@@ -297,17 +291,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 
     g_hWnd = win.Window();
     SetWindowPos(win.Window(), HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-
-    HICON hIcon = static_cast<HICON>(LoadImage(NULL,
-        TEXT("icon1.ico"),
-        //MAKEINTRESOURCE(IDI_ICON1),
-        IMAGE_ICON,
-        0, 0,
-        LR_DEFAULTCOLOR | LR_SHARED | LR_DEFAULTSIZE | LR_LOADFROMFILE));
-        //LR_DEFAULTSIZE));
-
-    //SendMessage(win.Window(), WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-    //SendMessage(win.Window(), WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 
     if (!RegisterHotKey(win.Window(), 1, MOD_CONTROL | MOD_ALT, 'Q'))
         MessageBox(win.Window(), L"regist hotkey failed.", L"Warning", MB_OK);
