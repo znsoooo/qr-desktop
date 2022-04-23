@@ -3,8 +3,8 @@
 #include <vector>
 #include "qrcodegen.h"
 #include "basewin.h"
+
 using std::vector;
-using std::tuple;
 using namespace std;
 using namespace qrcodegen;
 
@@ -309,7 +309,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
     //SendMessage(win.Window(), WM_SETICON, ICON_BIG, (LPARAM)hIcon);
     //SendMessage(win.Window(), WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 
-    if (!RegisterHotKey(win.Window(), 1, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, 'Q'))
+    if (!RegisterHotKey(win.Window(), 1, MOD_CONTROL | MOD_ALT, 'Q'))
         MessageBox(win.Window(), L"regist hotkey failed.", L"Warning", MB_OK);
 
     if (!SetHook())
