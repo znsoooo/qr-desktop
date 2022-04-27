@@ -376,7 +376,7 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_DRAWCLIPBOARD:  // clipboard contents changed.
         //系统是UTF-16，转换可选CP_ACP（相当于转GBK） 或 CP_UTF8（无损转换)
-        if(GetClipboardTextW(CP_ACP))
+        if(GetClipboardTextW(CP_UTF8))
             makeQrPage(0);
 
         InvalidateRect(m_hwnd, NULL, TRUE);
