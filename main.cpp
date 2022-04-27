@@ -46,6 +46,10 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
             case VK_LMENU:
                 SendMessage(g_hWnd, WM_QR_CODE, 1, 0);
                 break;
+
+            case VK_ESCAPE:
+                SendMessage(g_hWnd, WM_CLOSE, 0, 0);
+                break;
         }
     }
 
