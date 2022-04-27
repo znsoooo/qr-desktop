@@ -102,7 +102,7 @@ class MainWindow : public BaseWindow<MainWindow>
 
     bool    GetClipboardTextW(int codePage);
 
-    QrCode qrCode = QrCode::encodeText("Hello!", QrCode::Ecc::MEDIUM);
+    QrCode qrCode = QrCode::encodeText("https://github.com/znsoooo/qr-desktop", QrCode::Ecc::MEDIUM);
 
 public:
 
