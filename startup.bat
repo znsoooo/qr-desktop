@@ -1,0 +1,1 @@
+start shell:startup
