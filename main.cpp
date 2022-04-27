@@ -8,7 +8,7 @@ using std::vector;
 using namespace std;
 using namespace qrcodegen;
 
-#define    QR_TITLE       L"QR Desktop 0.1.3"
+#define    QR_TITLE       L"QR Desktop 0.1.4"
 const int  QR_PAGE_SIZE = 2000; // 1个汉字占2个字节
 
 
