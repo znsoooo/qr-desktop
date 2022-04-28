@@ -23,6 +23,18 @@ HHOOK      g_Hook;         // Handler of hook
 bool       g_show = 1;     // 界面显示状态
 
 
+void SetAutoRun()
+{
+    wchar_t mpath[256];
+    HKEY hKey;
+
+    GetModuleFileName(0, mpath, 256); // get self path
+    int ret = RegOpenKey(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
+    ret = RegSetValueEx(hKey, L"qrcode", 0, REG_SZ, (unsigned char*)wcscat(mpath, L" hide"), 256);
+    if(ret == 0)
+        RegCloseKey(hKey);
+}
+
 /***********  键盘钩子消息处理 *********************/
 LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
@@ -308,6 +320,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
     win.UpdateWindowSize();
     ShowWindow(g_hWnd, g_show);
     ToTray(g_hWnd);
+
+    SetAutoRun();
 
     // Run the message loop.
     MSG msg = { };
