@@ -9,6 +9,7 @@ using namespace std;
 using namespace qrcodegen;
 
 #define    QR_TITLE       L"QR Desktop 0.1.4"
+#define    SHOW_ICON      1
 const int  QR_PAGE_SIZE = 2000; // 1个汉字占2个字节
 
 
@@ -279,6 +280,7 @@ bool MainWindow::GetClipboardTextW(int codePage)
 //生成托盘
 void ToTray(HWND hWnd)
 {
+#if SHOW_ICON
     nid.cbSize = (DWORD)sizeof(NOTIFYICONDATA);
     nid.hWnd = hWnd;
     nid.uID = 1;
@@ -291,11 +293,14 @@ void ToTray(HWND hWnd)
 
     //wcscpy_s(nid.szTip, "QR Desktop");//鼠标放在托盘图标上时显示的文字
     Shell_NotifyIcon(NIM_ADD, &nid);//在托盘区添加图标
+#endif
 }
 
 void DeleteTray(HWND hWnd)
 {
+#if SHOW_ICON
     Shell_NotifyIcon(NIM_DELETE, &nid);//在托盘中删除图标
+#endif
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
