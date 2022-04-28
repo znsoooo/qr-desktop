@@ -286,26 +286,28 @@ void DeleteTray(HWND hWnd)
     Shell_NotifyIcon(NIM_DELETE, &nid);//在托盘中删除图标
 }
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
     MainWindow win;
+
+    if (wcscmp(pCmdLine, L"hide") == 0)
+        g_show = 0;
 
     if (!win.Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_DLGMODALFRAME)) // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
         return 0;
 
     g_hWnd = win.Window();
-    SetWindowPos(win.Window(), HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    SetWindowPos(g_hWnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
-    if (!RegisterHotKey(win.Window(), 1, MOD_CONTROL | MOD_ALT, 'Q'))
-        MessageBox(win.Window(), L"regist hotkey failed.", L"Warning", MB_OK);
+    if (!RegisterHotKey(g_hWnd, 1, MOD_CONTROL | MOD_ALT, 'Q'))
+        MessageBox(g_hWnd, L"regist hotkey failed.", L"Warning", MB_OK);
 
     if (!SetHook())
         ;
 
     win.UpdateWindowSize();
-    ShowWindow(win.Window(), g_show);
-    if (g_show)
-        ToTray(g_hWnd);
+    ShowWindow(g_hWnd, g_show);
+    ToTray(g_hWnd);
 
     // Run the message loop.
     MSG msg = { };
