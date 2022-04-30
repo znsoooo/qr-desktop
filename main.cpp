@@ -13,7 +13,7 @@ using namespace qrcodegen;
 const int  QR_PAGE_SIZE = 2000; // 1个汉字占2个字节
 
 
-HINSTANCE  g_hInstance;
+HINSTANCE  g_hInstance = (HINSTANCE)::GetModuleHandle(NULL);
 HWND       g_hWnd;
 UINT       uFormat = (UINT)(-1);
 BOOL       fAuto = TRUE;
@@ -42,7 +42,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
     KBDLLHOOKSTRUCT* pkh = (KBDLLHOOKSTRUCT*)lParam;
 
     //HC_ACTION: wParam 和lParam参数包含了键盘按键消息
-    if (nCode == HC_ACTION && wParam != WM_KEYUP && g_show) // CTRL: WM_KEYDOWN/WM_KEYUP, ALT: WM_SYSKEYDOWN/WM_KEYUP
+    if (nCode == HC_ACTION && wParam != WM_KEYUP) // CTRL: WM_KEYDOWN/WM_KEYUP, ALT: WM_SYSKEYDOWN/WM_KEYUP
     {
         switch (pkh->vkCode)
         {
@@ -63,6 +63,13 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
             case VK_ESCAPE:
                 SendMessage(g_hWnd, WM_CLOSE, 0, 0);
                 break;
+
+            case 'Q':
+                if (GetAsyncKeyState(VK_CONTROL) && GetAsyncKeyState(VK_MENU))
+                    if (!GetAsyncKeyState(VK_SHIFT))
+                        SendMessage(g_hWnd, WM_HOTKEY, 0, 0);  // Ctrl-Alt-Q -> Switch
+                    else
+                        SendMessage(g_hWnd, WM_DESTROY, 0, 0); // Ctrl-Alt-Shift-Q -> Exit
         }
     }
 
@@ -76,7 +83,6 @@ BOOL SetHook()
     if (g_hInstance && g_Hook)      // Already hooked!
         return TRUE;
 
-    g_hInstance = (HINSTANCE)::GetModuleHandle(NULL);
     g_Hook = ::SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)KeyboardProc, g_hInstance, 0);
     if (!g_Hook)
     {
@@ -315,17 +321,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
     g_hWnd = win.Window();
     SetWindowPos(g_hWnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-
-    if (!RegisterHotKey(g_hWnd, 1, MOD_CONTROL | MOD_ALT, 'Q'))
-        MessageBox(g_hWnd, L"regist hotkey failed.", L"Warning", MB_OK);
-
-    if (!SetHook())
-        ;
-
     win.UpdateWindowSize();
     ShowWindow(g_hWnd, g_show);
     ToTray(g_hWnd);
 
+    SetHook();
     SetAutoRun();
 
     // Run the message loop.
@@ -452,6 +452,8 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_QR_CODE:
+        if (!g_show)
+            return 0;
         // 按左箭头<-键查看前一页
         if (!wParam && 0 < pageIndex && pageIndex < txtPages.size())
             makeQrPage(--pageIndex);
