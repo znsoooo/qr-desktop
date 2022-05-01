@@ -171,11 +171,8 @@ public:
         //sprintf(info, "rc=(%d,%d,%d,%d),qr.size=%d,unitX=%d,unitY=%d\n",rc.left,rc.top,rc.right,rc.bottom,qr.getSize(),unitX,unitY);
         //OutputDebugStringA(info);
 
-        for (int y = 0; y < size; y++) {
-            for (int x = 0; x < size; x++) {
-                int rx = x * unitX + (rc.right  - unitX * size) / 2;
-                int ry = y * unitY + (rc.bottom - unitY * size) / 2;
-
+        for (int y = 0, ry = border; y < size; y++, ry += unitY) {
+            for (int x = 0, rx = border; x < size; x++, rx += unitX) {
                 RECT rectSegment{rx, ry, rx + unitX, ry + unitY};
 
                 if (qr.getModule(x, y))
