@@ -150,6 +150,9 @@ public:
 
         // 设置窗口标题
         SetWindowText(m_hwnd, info);
+
+        // 重画窗口
+        InvalidateRect(m_hwnd, NULL, TRUE);
     }
 
     void printQr(const QrCode &qr, HDC hdc, HDC hMemDC) {
@@ -207,11 +210,6 @@ void MainWindow::OnPaint()
     DeleteObject(m_hBitMap);
     DeleteDC(memDC);
     DeleteDC(hDC);
-}
-
-void MainWindow::Resize()
-{
-    InvalidateRect(m_hwnd, NULL, FALSE);
 }
 
 bool MainWindow::GetClipboardTextW(int codePage)
@@ -400,8 +398,6 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         if(GetClipboardTextW(CP_UTF8))
             makeQrPage(0);
 
-        InvalidateRect(m_hwnd, NULL, TRUE);
-
         SendMessage(hwndNextViewer, uMsg, wParam, lParam);
         break;
 
@@ -460,8 +456,6 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         // 按右箭头->键查看后一页
         if (wParam && -1 < pageIndex && pageIndex < txtPages.size() - 1)
             makeQrPage(++pageIndex);
-        // 重画窗口
-        InvalidateRect(m_hwnd, NULL, TRUE);
         return 0;
 
     case WM_HOTKEY:
