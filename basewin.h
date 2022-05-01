@@ -71,6 +71,7 @@ public:
 
         wc.lpfnWndProc   = DERIVED_TYPE::WindowProc;
         wc.hInstance     = GetModuleHandle(NULL);
+        wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
         wc.lpszClassName = ClassName();
 
         RegisterClass(&wc);
