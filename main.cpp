@@ -138,8 +138,6 @@ public:
         std::vector<QrSegment> segs = QrSegment::makeSegments(text);
         qrCode = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
 
-        UpdateWindowSize();
-
         // 生成窗口标题
         wchar_t info[256];
         if (txtPages.size() == 1)
@@ -148,11 +146,9 @@ public:
             wsprintf(info, L"%d (%d/%d) - %s", txtLen, page + 1, txtPages.size(), QR_TITLE);
         info[255] = 0;
 
-        // 设置窗口标题
-        SetWindowText(m_hwnd, info);
-
-        // 重画窗口
-        InvalidateRect(m_hwnd, NULL, TRUE);
+        SetWindowText(m_hwnd, info);        // 设置窗口标题
+        InvalidateRect(m_hwnd, NULL, TRUE); // 重画窗口
+        UpdateWindowSize();                 // 最后更新窗口大小减少闪烁
     }
 
     void printQr(const QrCode &qr, HDC hdc, HDC hMemDC) {
