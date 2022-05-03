@@ -110,8 +110,8 @@ class MainWindow : public BaseWindow<MainWindow>
     HBRUSH  hBrushBlack = CreateSolidBrush(RGB(0, 0, 0));
     HBRUSH  hBrushWhite = CreateSolidBrush(RGB(255, 255, 255));
 
+    void    PaintDC();
     void    OnPaint();
-    void    Resize();
 
     //剪切板
     std::string  clipboardText;
@@ -120,6 +120,11 @@ class MainWindow : public BaseWindow<MainWindow>
     int     txtLen = 0;
 
     bool    GetClipboardTextW(int codePage);
+
+    //设置double buffering
+    HDC hDC;
+    HDC memDC;
+    int widthDC;
 
     QrCode qrCode = QrCode::encodeText("https://github.com/znsoooo/qr-desktop", QrCode::Ecc::MEDIUM);
 
@@ -137,6 +142,7 @@ public:
         const char* text = txtPages[page].c_str();
         std::vector<QrSegment> segs = QrSegment::makeSegments(text);
         qrCode = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
+        widthDC = qrCode.getSize() * 2 + 4 * 2;
 
         // 生成窗口标题
         wchar_t info[256];
@@ -146,63 +152,53 @@ public:
             wsprintf(info, L"%d (%d/%d) - %s", txtLen, page + 1, txtPages.size(), QR_TITLE);
         info[255] = 0;
 
+        PaintDC();                          // 绘制DC
+        UpdateWindowSize();                 // 调整窗口大小
         SetWindowText(m_hwnd, info);        // 设置窗口标题
         InvalidateRect(m_hwnd, NULL, TRUE); // 重画窗口
-        UpdateWindowSize();                 // 最后更新窗口大小减少闪烁
     }
 
-    void printQr(const QrCode &qr, HDC hdc, HDC hMemDC) {
+    void printQr() {
+        int size = qrCode.getSize();
+        RECT rc{0, 0, widthDC, widthDC};
+        FillRect(memDC, &rc, hBrushWhite);
 
-        int border = 4;
+        for (int y = 0, ry = 4; y < size; y++, ry += 2) {
+            for (int x = 0, rx = 4; x < size; x++, rx += 2) {
+                RECT rectSegment{rx, ry, rx + 2, ry + 2};
 
-        RECT rc;
-        GetClientRect(m_hwnd, &rc);
-        FillRect(hMemDC, &rc, hBrushWhite);
-
-        int size = qr.getSize();
-        int unitX = 2;
-        int unitY = 2;
-
-        //char info[256];
-        //sprintf(info, "rc=(%d,%d,%d,%d),qr.size=%d,unitX=%d,unitY=%d\n",rc.left,rc.top,rc.right,rc.bottom,qr.getSize(),unitX,unitY);
-        //OutputDebugStringA(info);
-
-        for (int y = 0, ry = border; y < size; y++, ry += unitY) {
-            for (int x = 0, rx = border; x < size; x++, rx += unitX) {
-                RECT rectSegment{rx, ry, rx + unitX, ry + unitY};
-
-                if (qr.getModule(x, y))
-                    FillRect(hMemDC, &rectSegment, hBrushBlack);
+                if (qrCode.getModule(x, y))
+                    FillRect(memDC, &rectSegment, hBrushBlack);
                 else
-                    FillRect(hMemDC, &rectSegment, hBrushWhite);
+                    FillRect(memDC, &rectSegment, hBrushWhite);
             }
         }
-        BitBlt(hdc, 0, 0, rc.right, rc.bottom, hMemDC, 0, 0, SRCCOPY);
     }
 
 };
 
 
-void MainWindow::OnPaint()
+void MainWindow::PaintDC()
 {
-    HDC hDC = GetDC(m_hwnd);
-    HDC memDC = CreateCompatibleDC(hDC);
-    //设置double buffering
-    RECT rc;
-    GetClientRect(m_hwnd, &rc);
-    HBITMAP m_hBitMap = CreateCompatibleBitmap(hDC, rc.right - rc.left, rc.bottom - rc.top);
+    hDC = GetDC(m_hwnd);
+    memDC = CreateCompatibleDC(hDC);
+
+    HBITMAP m_hBitMap = CreateCompatibleBitmap(hDC, widthDC, widthDC);
     SelectObject(memDC, m_hBitMap);
 
     PAINTSTRUCT ps;
     BeginPaint(m_hwnd, &ps);
 
     //绘制二维码
-    printQr(qrCode, hDC, memDC);
+    printQr();
 
     EndPaint(m_hwnd, &ps);
     DeleteObject(m_hBitMap);
-    DeleteDC(memDC);
-    DeleteDC(hDC);
+}
+
+void MainWindow::OnPaint()
+{
+    BitBlt(hDC, 0, 0, widthDC, widthDC, memDC, 0, 0, SRCCOPY);
 }
 
 bool MainWindow::GetClipboardTextW(int codePage)
@@ -343,8 +339,7 @@ void MainWindow::UpdateWindowSize()
     RECT rw; GetWindowRect(m_hwnd, &rw);
 
     // 计算更新窗口大小
-    int width = qrCode.getSize() * 2 + 4 * 2;
-    RECT r{0, 0, width, width};
+    RECT r{0, 0, widthDC, widthDC};
     AdjustWindowRect(&r, GetWindowLong(m_hwnd, GWL_STYLE), FALSE);
 
     // 居中放大窗口
@@ -360,7 +355,6 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     static HWND hwndNextViewer;
     int width;
-    RECT rc{0, 0, 0, 0};
 
     switch (uMsg)
     {
