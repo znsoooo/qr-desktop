@@ -15,8 +15,6 @@ const int  QR_PAGE_SIZE = 2000; // 1个汉字占2个字节
 
 HINSTANCE  g_hInstance = (HINSTANCE)::GetModuleHandle(NULL);
 HWND       g_hWnd;
-UINT       uFormat = (UINT)(-1);
-BOOL       fAuto = TRUE;
 NOTIFYICONDATA nid;
 HMENU      hTrayMenu;
 
@@ -364,14 +362,12 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_CHANGECBCHAIN:
-
         // If the next window is closing, repair the chain.
         if ((HWND)wParam == hwndNextViewer)
             hwndNextViewer = (HWND)lParam;
         // Otherwise, pass the message to the next link.
         else if (hwndNextViewer != NULL)
             SendMessage(hwndNextViewer, uMsg, wParam, lParam);
-
         break;
 
     case WM_DESTROY:
@@ -418,12 +414,6 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 int cmd = TrackPopupMenu(hTrayMenu, TPM_RETURNCMD, pt.x, pt.y, 0, m_hwnd, 0);
                 if (cmd == ID_EXIT)
                     PostMessage(m_hwnd, WM_DESTROY, 0, 0);
-            }
-
-            case WM_CONTEXTMENU:
-            {
-                //ShowContextMenu(hWnd);
-                break;
             }
         }
         break;
