@@ -8,9 +8,10 @@ using std::vector;
 using namespace std;
 using namespace qrcodegen;
 
-#define    QR_TITLE       L"QR Desktop 0.1.5"
-#define    SHOW_ICON      1
-const int  QR_PAGE_SIZE = 2000; // 1个汉字占2个字节
+#define    QR_VERSION     L"v0.1.5"
+#define    QR_TITLE       L"QR Desktop"
+#define    QR_ICON        1
+const int  QR_PAGE_SIZE = 2000; // 1个汉字占3个字节
 
 
 HINSTANCE  g_hInstance = (HINSTANCE)::GetModuleHandle(NULL);
@@ -18,8 +19,8 @@ HWND       g_hWnd;
 NOTIFYICONDATA nid;
 HMENU      hTrayMenu;
 
-HHOOK      g_Hook;         // Handler of hook
-bool       g_show = 1;     // 界面显示状态
+HHOOK      g_Hook;           // Handler of hook
+bool       g_show = QR_ICON; // 界面显示状态 默认状态可是否显示图标一致
 
 
 void SetAutoRun()
@@ -271,25 +272,25 @@ bool MainWindow::GetClipboardTextW(int codePage)
 //生成托盘
 void ToTray(HWND hWnd)
 {
-#if SHOW_ICON
+#if QR_ICON
     nid.cbSize = (DWORD)sizeof(NOTIFYICONDATA);
     nid.hWnd = hWnd;
     nid.uID = 1;
-    nid.uFlags = NIF_ICON | NIF_MESSAGE ;
+    nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
     nid.uCallbackMessage = NOTIFICATION_TRAY_ICON_MSG;//自定义的消息 处理托盘图标事件
     nid.hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(101));
 
     hTrayMenu = CreatePopupMenu();//生成托盘菜单
-    AppendMenu(hTrayMenu, MF_STRING, ID_EXIT, TEXT("Exit"));
+    AppendMenu(hTrayMenu, MF_STRING, ID_EXIT, L"Exit");
 
-    //wcscpy_s(nid.szTip, "QR Desktop");//鼠标放在托盘图标上时显示的文字
+    wcscpy_s(nid.szTip, QR_VERSION);//鼠标放在托盘图标上时显示的文字
     Shell_NotifyIcon(NIM_ADD, &nid);//在托盘区添加图标
 #endif
 }
 
 void DeleteTray(HWND hWnd)
 {
-#if SHOW_ICON
+#if QR_ICON
     Shell_NotifyIcon(NIM_DELETE, &nid);//在托盘中删除图标
 #endif
 }
