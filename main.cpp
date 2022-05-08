@@ -137,7 +137,14 @@ public:
     PCWSTR  ClassName() const { return L"QR Code Class"; }
     LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-    void  makeQrPage(int page) {
+    void initial() {
+        widthDC = qrCode.getSize() * 2 + 4 * 2;
+        PaintDC();                          // 绘制DC
+        UpdateWindowSize();                 // 调整窗口大小
+        InvalidateRect(m_hwnd, NULL, TRUE); // 重画窗口
+    }
+
+    void makeQrPage(int page) {
         const char* text = txtPages[page].c_str();
         std::vector<QrSegment> segs = QrSegment::makeSegments(text);
         qrCode = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
@@ -307,7 +314,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
     g_hWnd = win.Window();
     SetWindowPos(g_hWnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    win.UpdateWindowSize();
+    win.initial();
     ShowWindow(g_hWnd, g_show);
     ToTray(g_hWnd);
 
