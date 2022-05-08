@@ -115,7 +115,7 @@ class MainWindow : public BaseWindow<MainWindow>
     //剪切板
     std::string  clipboardText;
     vector<string> txtPages;
-    int     pageIndex = 0;
+    int     pageIndex = -1;
     int     txtLen = 0;
 
     bool    GetClipboardTextW(int codePage);
@@ -432,7 +432,7 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         if (!wParam && 0 < pageIndex && pageIndex < txtPages.size())
             makeQrPage(--pageIndex);
         // 按右箭头->键查看后一页
-        if (wParam && -1 < pageIndex && pageIndex < txtPages.size() - 1)
+        if (wParam && -1 < pageIndex && pageIndex + 1 < txtPages.size()) // txtPages.size() - 1 可能向下越界
             makeQrPage(++pageIndex);
         return 0;
 
