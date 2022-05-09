@@ -36,6 +36,9 @@ void SetAutoRun()
 }
 
 /***********  键盘钩子消息处理 *********************/
+
+#define PRESSED(key) (GetAsyncKeyState(key)&0x8000)
+
 LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
     KBDLLHOOKSTRUCT* pkh = (KBDLLHOOKSTRUCT*)lParam;
@@ -64,8 +67,8 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
                 break;
 
             case 'Q':
-                if (GetAsyncKeyState(VK_CONTROL) && GetAsyncKeyState(VK_MENU))
-                    if (!GetAsyncKeyState(VK_SHIFT))
+                if (PRESSED(VK_CONTROL) && PRESSED(VK_MENU))
+                    if (!PRESSED(VK_SHIFT))
                         SendMessage(g_hWnd, WM_HOTKEY, 0, 0);  // Ctrl-Alt-Q -> Switch
                     else
                         SendMessage(g_hWnd, WM_DESTROY, 0, 0); // Ctrl-Alt-Shift-Q -> Exit
