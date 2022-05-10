@@ -1,17 +1,25 @@
 # QR Desktop
-Generate a __QR-Code__ is the most simplest thing today. 
-Look at `Clipboard` and make QR-Code by __hotkey__ is also not too difficult.
-Many people make this function in __different frameworks__.
-Like someone build it by `electron`, size 30.2 MiB, and I wrote one by `python`, size 14 MiB. 
-But wrote it by `C++` is complicated. It will be faster, and smaller, about __280 kB__, and cross-platformed, working well at `Windows XP` and above.
+Generate a __QR-Code__ is the most simplest thing today.  
+Monitor the `Clipboard` or make QR-Code by __hotkey__ is also not so difficult.  
+People make this function in __different frameworks__.  
+Someone build it by `electron`, size __30.2 MB__, and I wrote one by `python`, size __14.1 MB__.  
+Wrote it by `C++` will be complicated, but faster, and smaller, and clean.  
+I accomplish it in __222 KB__, it working on `Windows XP` and above, compatible with `32/64-bit` system.  
 
 ## About
 - __Author:__ Lishixian
 - __QQ:__ 11313213
 - __Email:__ lsx7@sina.com
-- __Github:__ https://github.com/znsoooo/qr_desktop
+- __GitHub:__ https://github.com/znsoooo/qr_desktop
 - __License:__ GPL 2.0 License. Copyright (c) 2022 Lishixian (znsoooo). All Rights Reserved.
 
 ## Feature
-- Open or close clipboard __QR-Code__ window by hotkey `Ctrl-Alt-Q` or double click icon in system tray.
-- Auto turn to multiple pages if data overflow than one __QR-Code__. Hotkey `Left/Right` / `Up/Down` / `PgUp/PgDn` to flip pages.
+- The program is written by C++ and only size with 200+ KB.
+- Copy your text and qr-code will shown in the window.
+- Long text separate into pages and use PgUp / PgDn to flip.
+- Double click icon in tray or use Ctrl-Alt-Q to hiding or showing window.
+- Use Ctrl-Alt-Shift-Q to quit.
+- Working on Windows XP and above.
+
+## Ref
+- QR-Code Library from: https://github.com/nayuki/QR-Code-generator
