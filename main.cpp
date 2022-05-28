@@ -34,7 +34,7 @@ public:
         }
         if (pThis)
         {
-            return pThis->HandleMessage(pThis->m_hwnd, uMsg, wParam, lParam);
+            return HandleMessage(pThis->m_hwnd, uMsg, wParam, lParam);
         }
         else
         {
@@ -222,109 +222,108 @@ BOOL UnSetHook()
 }
 /*************************************************/
 
+HBRUSH  hBrushBlack = CreateSolidBrush(RGB(0, 0, 0));
+HBRUSH  hBrushWhite = CreateSolidBrush(RGB(255, 255, 255));
+
+//剪切板
+std::string  clipboardText;
+vector<string> txtPages;
+int     pageIndex = -1;
+int     txtLen = 0;
+
+bool    GetClipboardTextW(int codePage);
+
+//设置double buffering
+HDC hDC;
+HDC memDC;
+int widthDC;
+
+void PaintDC(HWND hwnd);
+void OnPaint();
+void SwitchWindow(HWND hwnd);
+void UpdateWindowSize(HWND hwnd);
+
+QrCode qrCode = QrCode::encodeText("https://github.com/znsoooo/qr-desktop", QrCode::Ecc::MEDIUM);
+
 class MainWindow : public BaseWindow<MainWindow>
 {
-    HBRUSH  hBrushBlack = CreateSolidBrush(RGB(0, 0, 0));
-    HBRUSH  hBrushWhite = CreateSolidBrush(RGB(255, 255, 255));
-
-    void    PaintDC();
-    void    OnPaint();
-
-    //剪切板
-    std::string  clipboardText;
-    vector<string> txtPages;
-    int     pageIndex = -1;
-    int     txtLen = 0;
-
-    bool    GetClipboardTextW(int codePage);
-
-    //设置double buffering
-    HDC hDC;
-    HDC memDC;
-    int widthDC;
-
-    QrCode qrCode = QrCode::encodeText("https://github.com/znsoooo/qr-desktop", QrCode::Ecc::MEDIUM);
-
 public:
-
-    void    SwitchWindow();
-    void    UpdateWindowSize();
 
     MainWindow() {}
 
     LRESULT HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-    void initial() {
-        widthDC = qrCode.getSize() * 2 + 4 * 2;
-        PaintDC();                          // 绘制DC
-        UpdateWindowSize();                 // 调整窗口大小
-        InvalidateRect(m_hwnd, NULL, TRUE); // 重画窗口
-    }
-
-    void makeQrPage(int page) {
-        const char* text = txtPages[page].c_str();
-        std::vector<QrSegment> segs = QrSegment::makeSegments(text);
-        qrCode = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
-        widthDC = qrCode.getSize() * 2 + 4 * 2;
-
-        // 生成窗口标题
-        wchar_t info[256];
-        if (txtPages.size() == 1)
-            wsprintf(info, L"%d - %s", txtLen, QR_TITLE);
-        else
-            wsprintf(info, L"%d (%d/%d) - %s", txtLen, page + 1, txtPages.size(), QR_TITLE);
-        info[255] = 0;
-
-        PaintDC();                          // 绘制DC
-        UpdateWindowSize();                 // 调整窗口大小
-        SetWindowText(m_hwnd, info);        // 设置窗口标题
-        InvalidateRect(m_hwnd, NULL, TRUE); // 重画窗口
-    }
-
-    void printQr() {
-        int size = qrCode.getSize();
-        RECT rc{0, 0, widthDC, widthDC};
-        FillRect(memDC, &rc, hBrushWhite);
-
-        for (int y = 0, ry = 4; y < size; y++, ry += 2) {
-            for (int x = 0, rx = 4; x < size; x++, rx += 2) {
-                RECT rectSegment{rx, ry, rx + 2, ry + 2};
-
-                if (qrCode.getModule(x, y))
-                    FillRect(memDC, &rectSegment, hBrushBlack);
-                else
-                    FillRect(memDC, &rectSegment, hBrushWhite);
-            }
-        }
-    }
-
 };
 
+void initial(HWND hwnd) {
+    widthDC = qrCode.getSize() * 2 + 4 * 2;
+    PaintDC(hwnd);                    // 绘制DC
+    UpdateWindowSize(hwnd);           // 调整窗口大小
+    InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
+}
 
-void MainWindow::PaintDC()
+void makeQrPage(HWND hwnd, int page) {
+    const char* text = txtPages[page].c_str();
+    std::vector<QrSegment> segs = QrSegment::makeSegments(text);
+    qrCode = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
+    widthDC = qrCode.getSize() * 2 + 4 * 2;
+
+    // 生成窗口标题
+    wchar_t info[256];
+    if (txtPages.size() == 1)
+        wsprintf(info, L"%d - %s", txtLen, QR_TITLE);
+    else
+        wsprintf(info, L"%d (%d/%d) - %s", txtLen, page + 1, txtPages.size(), QR_TITLE);
+    info[255] = 0;
+
+    PaintDC(hwnd);                    // 绘制DC
+    UpdateWindowSize(hwnd);           // 调整窗口大小
+    SetWindowText(hwnd, info);        // 设置窗口标题
+    InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
+}
+
+void printQr() {
+    int size = qrCode.getSize();
+    RECT rc{0, 0, widthDC, widthDC};
+    FillRect(memDC, &rc, hBrushWhite);
+
+    for (int y = 0, ry = 4; y < size; y++, ry += 2) {
+        for (int x = 0, rx = 4; x < size; x++, rx += 2) {
+            RECT rectSegment{rx, ry, rx + 2, ry + 2};
+
+            if (qrCode.getModule(x, y))
+                FillRect(memDC, &rectSegment, hBrushBlack);
+            else
+                FillRect(memDC, &rectSegment, hBrushWhite);
+        }
+    }
+}
+
+
+void PaintDC(HWND hwnd)
 {
-    hDC = GetDC(m_hwnd);
+    hDC = GetDC(hwnd);
     memDC = CreateCompatibleDC(hDC);
 
     HBITMAP m_hBitMap = CreateCompatibleBitmap(hDC, widthDC, widthDC);
     SelectObject(memDC, m_hBitMap);
 
     PAINTSTRUCT ps;
-    BeginPaint(m_hwnd, &ps);
+    BeginPaint(hwnd, &ps);
 
     //绘制二维码
     printQr();
 
-    EndPaint(m_hwnd, &ps);
+    EndPaint(hwnd, &ps);
     DeleteObject(m_hBitMap);
 }
 
-void MainWindow::OnPaint()
+void OnPaint()
 {
     BitBlt(hDC, 0, 0, widthDC, widthDC, memDC, 0, 0, SRCCOPY);
 }
 
-bool MainWindow::GetClipboardTextW(int codePage)
+bool GetClipboardTextW(int codePage)
 {
     // Try opening the clipboard
     if (!OpenClipboard(nullptr))
@@ -394,11 +393,11 @@ bool MainWindow::GetClipboardTextW(int codePage)
 }
 
 //生成托盘
-void ToTray(HWND hWnd)
+void ToTray(HWND hwnd)
 {
 #if QR_ICON
     nid.cbSize = (DWORD)sizeof(NOTIFYICONDATA);
-    nid.hWnd = hWnd;
+    nid.hWnd = hwnd;
     nid.uID = 1;
     nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
     nid.uCallbackMessage = NOTIFICATION_TRAY_ICON_MSG;//自定义的消息 处理托盘图标事件
@@ -412,7 +411,7 @@ void ToTray(HWND hWnd)
 #endif
 }
 
-void DeleteTray(HWND hWnd)
+void DeleteTray()
 {
 #if QR_ICON
     Shell_NotifyIcon(NIM_DELETE, &nid);//在托盘中删除图标
@@ -432,7 +431,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
     g_hWnd = win.m_hwnd;
     SetWindowPos(g_hWnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    win.initial();
+    initial(win.m_hwnd);
     ShowWindow(g_hWnd, g_show);
     ToTray(g_hWnd);
 
@@ -450,24 +449,24 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
     return 0;
 }
 
-void MainWindow::SwitchWindow()
+void SwitchWindow(HWND hwnd)
 {
     // 切换显示窗口
     g_show = !g_show;
-    ShowWindow(m_hwnd, g_show ? SW_SHOW : SW_HIDE);
+    ShowWindow(hwnd, g_show ? SW_SHOW : SW_HIDE);
 }
 
-void MainWindow::UpdateWindowSize()
+void UpdateWindowSize(HWND hwnd)
 {
     // 获取当前窗口大小
-    RECT rw; GetWindowRect(m_hwnd, &rw);
+    RECT rw; GetWindowRect(hwnd, &rw);
 
     // 计算更新窗口大小
     RECT r{0, 0, widthDC, widthDC};
-    AdjustWindowRect(&r, GetWindowLong(m_hwnd, GWL_STYLE), FALSE);
+    AdjustWindowRect(&r, GetWindowLong(hwnd, GWL_STYLE), FALSE);
 
     // 居中放大窗口
-    SetWindowPos(m_hwnd, 0,
+    SetWindowPos(hwnd, 0,
         ((rw.right + rw.left) - (r.right - r.left)) / 2,
         ((rw.bottom + rw.top) - (r.bottom - r.top)) / 2,
         r.right - r.left,
@@ -475,7 +474,7 @@ void MainWindow::UpdateWindowSize()
         SWP_NOZORDER | SWP_NOACTIVATE); // 不捕获窗口热点
 }
 
-LRESULT MainWindow::HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     static HWND hwndNextViewer;
     int width;
@@ -497,7 +496,7 @@ LRESULT MainWindow::HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
         break;
 
     case WM_DESTROY:
-        DeleteTray(hwnd);
+        DeleteTray();
         ChangeClipboardChain(hwnd, hwndNextViewer);
         PostQuitMessage(0);
         return 0;
@@ -505,7 +504,7 @@ LRESULT MainWindow::HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
     case WM_DRAWCLIPBOARD:  // clipboard contents changed.
         //系统是UTF-16，转换可选CP_ACP（相当于转GBK） 或 CP_UTF8（无损转换)
         if(GetClipboardTextW(CP_UTF8))
-            makeQrPage(0);
+            makeQrPage(hwnd, 0);
 
         SendMessage(hwndNextViewer, uMsg, wParam, lParam);
         break;
@@ -522,7 +521,7 @@ LRESULT MainWindow::HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
         {
             case WM_LBUTTONDBLCLK:
             {
-                SwitchWindow();
+                SwitchWindow(hwnd);
                 break;
             }
             case WM_RBUTTONDOWN:
@@ -555,14 +554,14 @@ LRESULT MainWindow::HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
             return 0;
         // 按左箭头<-键查看前一页
         if (!wParam && 0 < pageIndex && pageIndex < txtPages.size())
-            makeQrPage(--pageIndex);
+            makeQrPage(hwnd, --pageIndex);
         // 按右箭头->键查看后一页
         if (wParam && -1 < pageIndex && pageIndex + 1 < txtPages.size()) // txtPages.size() - 1 可能向下越界
-            makeQrPage(++pageIndex);
+            makeQrPage(hwnd, ++pageIndex);
         return 0;
 
     case WM_HOTKEY:
-        SwitchWindow();
+        SwitchWindow(hwnd);
         break;
 
     case WM_GETMINMAXINFO:
