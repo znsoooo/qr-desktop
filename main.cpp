@@ -3,97 +3,67 @@
 #include <vector>
 #include "qrcodegen.h"
 
-#include <stdarg.h>
-using namespace std;
-template <class DERIVED_TYPE>
 #define NOTIFICATION_TRAY_ICON_MSG (WM_USER + 0x100)
 #define WM_QR_CODE (WM_USER + 0x110)
 #define ID_EXIT     40001
 
-class BaseWindow
+LRESULT HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-public:
+    return HandleMessage(hwnd, uMsg, wParam, lParam);
+}
 
-    HWND m_hwnd;
+HWND Create(
+    PCWSTR lpWindowName,
+    DWORD dwStyle,
+    DWORD dwExStyle = 0,
+    int x = CW_USEDEFAULT,
+    int y = CW_USEDEFAULT,
+    int nWidth = CW_USEDEFAULT,
+    int nHeight = CW_USEDEFAULT,
+    HWND hWndParent = 0,
+    HMENU hMenu = 0
+    )
+{
+    PCWSTR lpClassName = L"QR Code Class";
 
-    static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-    {
-        DERIVED_TYPE *pThis = NULL;
+    // Make parent window.
 
-        if (uMsg == WM_NCCREATE)
-        {
-            CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam;
-            pThis = (DERIVED_TYPE*)pCreate->lpCreateParams;
-            SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
+    WNDCLASS wc_p = {0};
 
-            pThis->m_hwnd = hwnd;
-        }
-        else
-        {
-            pThis = (DERIVED_TYPE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-        }
-        if (pThis)
-        {
-            return HandleMessage(pThis->m_hwnd, uMsg, wParam, lParam);
-        }
-        else
-        {
-            return DefWindowProc(hwnd, uMsg, wParam, lParam);
-        }
-    }
+    wc_p.lpfnWndProc   = DefWindowProc;
+    wc_p.hInstance     = GetModuleHandle(NULL);
+    wc_p.lpszClassName = L"QR Parent Class";
 
-    HWND Create(
-        PCWSTR lpWindowName,
-        DWORD dwStyle,
-        DWORD dwExStyle = 0,
-        int x = CW_USEDEFAULT,
-        int y = CW_USEDEFAULT,
-        int nWidth = CW_USEDEFAULT,
-        int nHeight = CW_USEDEFAULT,
-        HWND hWndParent = 0,
-        HMENU hMenu = 0
-        )
-    {
-        PCWSTR lpClassName = L"QR Code Class";
+    RegisterClass(&wc_p);
 
-        // Make parent window.
+    HWND p_hwnd = CreateWindowEx(
+        dwExStyle, L"QR Parent Class", L"QR PARENT", dwStyle, 100, 100,
+        300, 200, hWndParent, hMenu, NULL, 0
+    );
 
-        WNDCLASS wc_p = {0};
+    // Make child window. (No icon in status bar)
 
-        wc_p.lpfnWndProc   = DefWindowProc;
-        wc_p.hInstance     = GetModuleHandle(NULL);
-        wc_p.lpszClassName = L"QR Parent Class";
+    WNDCLASS wc = {0};
 
-        RegisterClass(&wc_p);
+    wc.lpfnWndProc   = WindowProc;
+    wc.hInstance     = GetModuleHandle(NULL);
+    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
+    wc.lpszClassName = lpClassName;
 
-        HWND p_hwnd = CreateWindowEx(
-            dwExStyle, L"QR Parent Class", L"QR PARENT", dwStyle, 100, 100,
-            300, 200, hWndParent, hMenu, NULL, 0
-        );
+    RegisterClass(&wc);
 
-        // Make child window. (No icon in status bar)
+    RECT rc = { 0, 0, 192, 192 };
+    AdjustWindowRect(&rc, dwStyle, FALSE);
 
-        WNDCLASS wc = {0};
+    HWND hwnd = CreateWindowEx(
+        dwExStyle, lpClassName, lpWindowName, dwStyle, x, y,
+        rc.right-rc.left,rc.bottom-rc.top, p_hwnd, hMenu, GetModuleHandle(NULL), 0
+    );
 
-        wc.lpfnWndProc   = DERIVED_TYPE::WindowProc;
-        wc.hInstance     = GetModuleHandle(NULL);
-        wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
-        wc.lpszClassName = lpClassName;
-
-        RegisterClass(&wc);
-
-        RECT rc = { 0, 0, 192, 192 };
-        AdjustWindowRect(&rc, dwStyle, FALSE);
-
-        HWND hwnd = CreateWindowEx(
-            dwExStyle, lpClassName, lpWindowName, dwStyle, x, y,
-            rc.right-rc.left,rc.bottom-rc.top, p_hwnd, hMenu, GetModuleHandle(NULL), this
-        );
-
-        return hwnd;
-    }
-
-};
+    return hwnd;
+}
 
 
 void WriteLog(const char* format, ...)
@@ -130,7 +100,7 @@ const int  QR_PAGE_SIZE = 2000; // 1个汉字占3个字节
 
 
 HINSTANCE  g_hInstance = (HINSTANCE)::GetModuleHandle(NULL);
-HWND       g_hWnd;
+HWND       g_hwnd;
 NOTIFYICONDATA nid;
 HMENU      hTrayMenu;
 
@@ -167,26 +137,26 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
             case VK_UP:
             case VK_PRIOR:
             case VK_LCONTROL:
-                SendMessage(g_hWnd, WM_QR_CODE, 0, 0);
+                SendMessage(g_hwnd, WM_QR_CODE, 0, 0);
                 break;
 
             case VK_RIGHT:
             case VK_DOWN:
             case VK_NEXT:
             case VK_LMENU:
-                SendMessage(g_hWnd, WM_QR_CODE, 1, 0);
+                SendMessage(g_hwnd, WM_QR_CODE, 1, 0);
                 break;
 
             case VK_ESCAPE:
-                SendMessage(g_hWnd, WM_CLOSE, 0, 0);
+                SendMessage(g_hwnd, WM_CLOSE, 0, 0);
                 break;
 
             case 'Q':
                 if (PRESSED(VK_CONTROL) && PRESSED(VK_MENU))
                     if (!PRESSED(VK_SHIFT))
-                        SendMessage(g_hWnd, WM_HOTKEY, 0, 0);  // Ctrl-Alt-Q -> Switch
+                        SendMessage(g_hwnd, WM_HOTKEY, 0, 0);  // Ctrl-Alt-Q -> Switch
                     else
-                        SendMessage(g_hWnd, WM_DESTROY, 0, 0); // Ctrl-Alt-Shift-Q -> Exit
+                        SendMessage(g_hwnd, WM_DESTROY, 0, 0); // Ctrl-Alt-Shift-Q -> Exit
         }
     }
 
@@ -200,7 +170,7 @@ BOOL SetHook()
     if (g_hInstance && g_Hook)      // Already hooked!
         return TRUE;
 
-    g_Hook = ::SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)KeyboardProc, g_hInstance, 0);
+    g_Hook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)KeyboardProc, g_hInstance, 0);
     if (!g_Hook)
     {
         OutputDebugStringA("set keyboard hook failed.");
@@ -245,15 +215,6 @@ void UpdateWindowSize(HWND hwnd);
 
 QrCode qrCode = QrCode::encodeText("https://github.com/znsoooo/qr-desktop", QrCode::Ecc::MEDIUM);
 
-class MainWindow : public BaseWindow<MainWindow>
-{
-public:
-
-    MainWindow() {}
-
-    LRESULT HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-
-};
 
 void initial(HWND hwnd) {
     widthDC = qrCode.getSize() * 2 + 4 * 2;
@@ -420,20 +381,18 @@ void DeleteTray()
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
-    MainWindow win;
-
     if (wcscmp(pCmdLine, L"hide") == 0)
         g_show = 0;
 
-    win.m_hwnd = win.Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_DLGMODALFRAME); // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
-    if (!win.m_hwnd)
+    HWND hwnd = Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_DLGMODALFRAME); // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
+    if (!hwnd)
         return 0;
 
-    g_hWnd = win.m_hwnd;
-    SetWindowPos(g_hWnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    initial(win.m_hwnd);
-    ShowWindow(g_hWnd, g_show);
-    ToTray(g_hWnd);
+    g_hwnd = hwnd;
+    SetWindowPos(hwnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    initial(hwnd);
+    ShowWindow(hwnd, g_show);
+    ToTray(hwnd);
 
     SetHook();
     SetAutoRun();
