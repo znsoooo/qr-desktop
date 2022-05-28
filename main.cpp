@@ -7,27 +7,10 @@
 #define WM_QR_CODE (WM_USER + 0x110)
 #define ID_EXIT     40001
 
-LRESULT HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+HWND Create(PCWSTR lpWindowName, DWORD dwStyle, DWORD dwExStyle)
 {
-    return HandleMessage(hwnd, uMsg, wParam, lParam);
-}
-
-HWND Create(
-    PCWSTR lpWindowName,
-    DWORD dwStyle,
-    DWORD dwExStyle = 0,
-    int x = CW_USEDEFAULT,
-    int y = CW_USEDEFAULT,
-    int nWidth = CW_USEDEFAULT,
-    int nHeight = CW_USEDEFAULT,
-    HWND hWndParent = 0,
-    HMENU hMenu = 0
-    )
-{
-    PCWSTR lpClassName = L"QR Code Class";
-
     // Make parent window.
 
     WNDCLASS wc_p = {0};
@@ -39,18 +22,18 @@ HWND Create(
     RegisterClass(&wc_p);
 
     HWND p_hwnd = CreateWindowEx(
-        dwExStyle, L"QR Parent Class", L"QR PARENT", dwStyle, 100, 100,
-        300, 200, hWndParent, hMenu, NULL, 0
+        dwExStyle, wc_p.lpszClassName, L"QR PARENT", dwStyle, 100, 100,
+        300, 200, 0, 0, NULL, 0
     );
 
     // Make child window. (No icon in status bar)
 
     WNDCLASS wc = {0};
 
-    wc.lpfnWndProc   = WindowProc;
+    wc.lpfnWndProc   = HandleMessage;
     wc.hInstance     = GetModuleHandle(NULL);
     wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
-    wc.lpszClassName = lpClassName;
+    wc.lpszClassName = L"QR Code Class";
 
     RegisterClass(&wc);
 
@@ -58,8 +41,8 @@ HWND Create(
     AdjustWindowRect(&rc, dwStyle, FALSE);
 
     HWND hwnd = CreateWindowEx(
-        dwExStyle, lpClassName, lpWindowName, dwStyle, x, y,
-        rc.right-rc.left,rc.bottom-rc.top, p_hwnd, hMenu, GetModuleHandle(NULL), 0
+        dwExStyle, wc.lpszClassName, lpWindowName, dwStyle, CW_USEDEFAULT, CW_USEDEFAULT,
+        rc.right-rc.left, rc.bottom-rc.top, p_hwnd, 0, GetModuleHandle(NULL), 0
     );
 
     return hwnd;
@@ -433,7 +416,7 @@ void UpdateWindowSize(HWND hwnd)
         SWP_NOZORDER | SWP_NOACTIVATE); // 不捕获窗口热点
 }
 
-LRESULT HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     static HWND hwndNextViewer;
     int width;
