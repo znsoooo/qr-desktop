@@ -13,6 +13,9 @@ template <class DERIVED_TYPE>
 class BaseWindow
 {
 public:
+
+    HWND m_hwnd;
+
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
         DERIVED_TYPE *pThis = NULL;
@@ -31,7 +34,7 @@ public:
         }
         if (pThis)
         {
-            return pThis->HandleMessage(uMsg, wParam, lParam);
+            return pThis->HandleMessage(pThis->m_hwnd, uMsg, wParam, lParam);
         }
         else
         {
@@ -39,9 +42,7 @@ public:
         }
     }
 
-    BaseWindow() : m_hwnd(NULL) { }
-
-    BOOL Create(
+    HWND Create(
         PCWSTR lpWindowName,
         DWORD dwStyle,
         DWORD dwExStyle = 0,
@@ -53,6 +54,7 @@ public:
         HMENU hMenu = 0
         )
     {
+        PCWSTR lpClassName = L"QR Code Class";
 
         // Make parent window.
 
@@ -69,7 +71,6 @@ public:
             300, 200, hWndParent, hMenu, NULL, 0
         );
 
-
         // Make child window. (No icon in status bar)
 
         WNDCLASS wc = {0};
@@ -77,52 +78,45 @@ public:
         wc.lpfnWndProc   = DERIVED_TYPE::WindowProc;
         wc.hInstance     = GetModuleHandle(NULL);
         wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
-        wc.lpszClassName = ClassName();
+        wc.lpszClassName = lpClassName;
 
         RegisterClass(&wc);
 
         RECT rc = { 0, 0, 192, 192 };
         AdjustWindowRect(&rc, dwStyle, FALSE);
 
-        m_hwnd = CreateWindowEx(
-            dwExStyle, ClassName(), lpWindowName, dwStyle, x, y,
+        HWND hwnd = CreateWindowEx(
+            dwExStyle, lpClassName, lpWindowName, dwStyle, x, y,
             rc.right-rc.left,rc.bottom-rc.top, p_hwnd, hMenu, GetModuleHandle(NULL), this
         );
 
-        return (m_hwnd ? TRUE : FALSE);
+        return hwnd;
     }
 
-    HWND Window() const { return m_hwnd; }
-
-
-    static void WriteLog(const char* format,...)
-    {
-        char  buf[1024];
-
-        va_list p;
-        va_start(p, format);
-        vsprintf(buf, format, p);
-        va_end(p);
-
-        const char* path = "log.txt";
-        FILE *stream;
-        if ((stream = fopen(path, "a+")) == NULL)
-        {
-            MessageBox(0, L"Could not create/open a file", L"Error", 16);
-            return ;
-        }
-        //fprintf(stream, "%s\n", buffer);
-        //fseek(stream, 0L, SEEK_END);
-        fprintf(stream, "%s\n", buf);
-        fclose(stream);
-    }
-protected:
-
-    virtual PCWSTR  ClassName() const = 0;
-    virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
-
-    HWND m_hwnd;
 };
+
+
+void WriteLog(const char* format, ...)
+{
+    char buf[1024];
+
+    va_list p;
+    va_start(p, format);
+    vsprintf(buf, format, p);
+    va_end(p);
+
+    const char* path = "log.txt";
+    FILE *stream;
+    if ((stream = fopen(path, "a+")) == NULL)
+    {
+        MessageBox(0, L"Could not create/open a file", L"Error", 16);
+        return ;
+    }
+    //fprintf(stream, "%s\n", buffer);
+    //fseek(stream, 0L, SEEK_END);
+    fprintf(stream, "%s\n", buf);
+    fclose(stream);
+}
 
 
 using std::vector;
@@ -258,8 +252,7 @@ public:
 
     MainWindow() {}
 
-    PCWSTR  ClassName() const { return L"QR Code Class"; }
-    LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
+    LRESULT HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     void initial() {
         widthDC = qrCode.getSize() * 2 + 4 * 2;
@@ -433,10 +426,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
     if (wcscmp(pCmdLine, L"hide") == 0)
         g_show = 0;
 
-    if (!win.Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_DLGMODALFRAME)) // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
+    win.m_hwnd = win.Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_DLGMODALFRAME); // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
+    if (!win.m_hwnd)
         return 0;
 
-    g_hWnd = win.Window();
+    g_hWnd = win.m_hwnd;
     SetWindowPos(g_hWnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
     win.initial();
     ShowWindow(g_hWnd, g_show);
@@ -481,7 +475,7 @@ void MainWindow::UpdateWindowSize()
         SWP_NOZORDER | SWP_NOACTIVATE); // 不捕获窗口热点
 }
 
-LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT MainWindow::HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     static HWND hwndNextViewer;
     int width;
@@ -490,7 +484,7 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
     case WM_CREATE:
         // Add the window to the clipboard viewer chain.
-        hwndNextViewer = SetClipboardViewer(m_hwnd);
+        hwndNextViewer = SetClipboardViewer(hwnd);
         return 0;
 
     case WM_CHANGECBCHAIN:
@@ -503,8 +497,8 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_DESTROY:
-        DeleteTray(m_hwnd);
-        ChangeClipboardChain(m_hwnd, hwndNextViewer);
+        DeleteTray(hwnd);
+        ChangeClipboardChain(hwnd, hwndNextViewer);
         PostQuitMessage(0);
         return 0;
 
@@ -537,22 +531,22 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 POINT pt; GetCursorPos(&pt);
 
                 //解决在菜单外单击左键菜单不消失的问题
-                SetForegroundWindow(m_hwnd);
+                SetForegroundWindow(hwnd);
 
                 //使菜单某项变灰
                 //EnableMenuItem(hMenu, ID_SHOW, MF_GRAYED);
 
                 //显示并获取选中的菜单
-                int cmd = TrackPopupMenu(hTrayMenu, TPM_RETURNCMD, pt.x, pt.y, 0, m_hwnd, 0);
+                int cmd = TrackPopupMenu(hTrayMenu, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, 0);
                 if (cmd == ID_EXIT)
-                    PostMessage(m_hwnd, WM_DESTROY, 0, 0);
+                    PostMessage(hwnd, WM_DESTROY, 0, 0);
             }
         }
         break;
 
     case WM_CLOSE:
-        ToTray(m_hwnd);
-        ShowWindow(m_hwnd, SW_HIDE);
+        ToTray(hwnd);
+        ShowWindow(hwnd, SW_HIDE);
         g_show = 0;
         return 0;
 
@@ -576,5 +570,5 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
         mmi->ptMinTrackSize.x = 10; // 覆盖默认最小尺寸限制
         return 0;
     }
-    return DefWindowProc(m_hwnd, uMsg, wParam, lParam);
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
