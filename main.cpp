@@ -1,11 +1,11 @@
 #include <windows.h>
 #include <winuser.h>
 #include <vector>
+#include <string>
 #include "qrcodegen.h"
 
 using std::vector;
 using namespace std;
-using namespace qrcodegen;
 
 #define    QR_VERSION     L"v0.1.6"
 #define    QR_TITLE       L"QR Desktop"
@@ -147,9 +147,9 @@ void OnPaint()
     BitBlt(hDC, 0, 0, g_width, g_width, memDC, 0, 0, SRCCOPY);
 }
 
-void dc_MakeQr(QrCode qr)
+void dc_MakeQr(uint8_t qr[])
 {
-    int size = qr.getSize();
+    int size = qrcodegen_getSize(qr);
     HBRUSH black = CreateSolidBrush(RGB(0, 0, 0));
     HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
 
@@ -160,7 +160,7 @@ void dc_MakeQr(QrCode qr)
         for (int x = 0, rx = 4; x < size; x++, rx += 2) {
             RECT rectSegment{rx, ry, rx + 2, ry + 2};
 
-            if (qr.getModule(x, y))
+            if (qrcodegen_getModule(qr, x, y))
                 FillRect(memDC, &rectSegment, black);
             else
                 FillRect(memDC, &rectSegment, white);
@@ -168,7 +168,7 @@ void dc_MakeQr(QrCode qr)
     }
 }
 
-void dc_Paint(HWND hwnd, QrCode qr)
+void dc_Paint(HWND hwnd, uint8_t qr[])
 {
     hDC = GetDC(hwnd);
     memDC = CreateCompatibleDC(hDC);
@@ -189,9 +189,10 @@ void dc_Paint(HWND hwnd, QrCode qr)
 void dc_Page(HWND hwnd, int page)
 {
     const char* text = g_pages[page].c_str();
-    std::vector<QrSegment> segs = QrSegment::makeSegments(text);
-    QrCode qr = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
-    g_width = qr.getSize() * 2 + 4 * 2;
+    uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
+    uint8_t buf[qrcodegen_BUFFER_LEN_MAX];
+    bool ok = qrcodegen_encodeText(text, buf, qr, qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_3, true);  // Force mask 3
+    g_width = qrcodegen_getSize(qr) * 2 + 4 * 2;
 
     // 生成窗口标题
     wchar_t info[256];
@@ -298,8 +299,11 @@ HWND win_Create(PCWSTR lpWindowName, DWORD dwStyle, DWORD dwExStyle)
 
 void win_Initial(HWND hwnd)
 {
-    QrCode qr = QrCode::encodeText("https://github.com/znsoooo/qr-desktop", QrCode::Ecc::MEDIUM);
-    g_width = qr.getSize() * 2 + 4 * 2;
+    const char *text = "https://github.com/znsoooo/qr-desktop";
+    uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
+    uint8_t buf[qrcodegen_BUFFER_LEN_MAX];
+    bool ok = qrcodegen_encodeText(text, buf, qr, qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+    g_width = qrcodegen_getSize(qr) * 2 + 4 * 2;
     dc_Paint(hwnd, qr);               // 绘制DC
     win_Sizing(hwnd);                 // 调整窗口大小
     InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
