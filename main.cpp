@@ -19,8 +19,6 @@ HMENU      g_menu;
 HHOOK      g_hook;           // Handler of hook
 bool       g_show = QR_ICON; // 界面显示状态 默认状态可是否显示图标一致
 
-NOTIFYICONDATA nid;
-
 
 #define WM_ON_TRAY (WM_USER + 0x100)
 #define WM_QR_CODE (WM_USER + 0x110)
@@ -32,18 +30,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void win_Sizing(HWND hwnd);
 
 //剪切板
-std::string  clipboardText;
-vector<string> txtPages;
-int     pageIndex = -1;
-int     txtLen = 0;
+vector<string> g_pages;
+int g_index  = -1;
+int g_length = 0;
+int g_width  = 0;
 
 //设置double buffering
 HDC hDC;
 HDC memDC;
-int widthDC;
-
-QrCode qrCode = QrCode::encodeText("https://github.com/znsoooo/qr-desktop", QrCode::Ecc::MEDIUM);
-
 
 void log(const char* format, ...)
 {
@@ -105,8 +99,8 @@ bool GetClipboard(int codePage)
     }
 
     // 清空分页
-    txtLen = wcslen(pwstr);
-    txtPages.clear();
+    g_length = wcslen(pwstr);
+    g_pages.clear();
 
     int total = WideCharToMultiByte(codePage, 0, pwstr, -1, 0, 0, NULL, NULL) - 1; // 尾部多一个 \0
     int pages = 1 + (total - 1) / QR_PAGE_SIZE;
@@ -117,7 +111,7 @@ bool GetClipboard(int codePage)
     char segment[QR_PAGE_SIZE + 8];
     int wLen = 0;
     int chLen = 0;
-    int target = average + (txtPages.size() < remain);
+    int target = average + (g_pages.size() < remain);
     do {
         //逐个宽字符累计长度
         int c = WideCharToMultiByte(codePage, 0, pwstr++, 1, 0, 0, NULL, NULL);
@@ -127,17 +121,17 @@ bool GetClipboard(int codePage)
         {
             int c2 = WideCharToMultiByte(codePage, 0, pwstr - wLen, wLen, segment, QR_PAGE_SIZE + 8, NULL, NULL);
             segment[c2] = 0; // c2总是小于QR_PAGE_SIZE+8
-            txtPages.push_back(segment);
-            target += average + (txtPages.size() < remain); // 前面remain页每页多一个字节，接近平均
+            g_pages.push_back(segment);
+            target += average + (g_pages.size() < remain); // 前面remain页每页多一个字节，接近平均
             wLen = 0;
         }
     } while (*pwstr);
 
     //log("\ntotal: %d", total);
-    //for(int k=0;k<txtPages.size() ;k++)
-    //  log("P%d = %d,", k, txtPages[k].length());
+    //for(int k=0;k<g_pages.size() ;k++)
+    //  log("P%d = %d,", k, g_pages[k].length());
 
-    pageIndex = 0;
+    g_index = 0;
 
     // Release the lock
     GlobalUnlock(hData);
@@ -150,23 +144,23 @@ bool GetClipboard(int codePage)
 
 void OnPaint()
 {
-    BitBlt(hDC, 0, 0, widthDC, widthDC, memDC, 0, 0, SRCCOPY);
+    BitBlt(hDC, 0, 0, g_width, g_width, memDC, 0, 0, SRCCOPY);
 }
 
-void dc_MakeQr()
+void dc_MakeQr(QrCode qr)
 {
-    int size = qrCode.getSize();
+    int size = qr.getSize();
     HBRUSH black = CreateSolidBrush(RGB(0, 0, 0));
     HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
 
-    RECT rc{0, 0, widthDC, widthDC};
+    RECT rc{0, 0, g_width, g_width};
     FillRect(memDC, &rc, white);
 
     for (int y = 0, ry = 4; y < size; y++, ry += 2) {
         for (int x = 0, rx = 4; x < size; x++, rx += 2) {
             RECT rectSegment{rx, ry, rx + 2, ry + 2};
 
-            if (qrCode.getModule(x, y))
+            if (qr.getModule(x, y))
                 FillRect(memDC, &rectSegment, black);
             else
                 FillRect(memDC, &rectSegment, white);
@@ -174,19 +168,19 @@ void dc_MakeQr()
     }
 }
 
-void dc_Paint(HWND hwnd)
+void dc_Paint(HWND hwnd, QrCode qr)
 {
     hDC = GetDC(hwnd);
     memDC = CreateCompatibleDC(hDC);
 
-    HBITMAP m_hBitMap = CreateCompatibleBitmap(hDC, widthDC, widthDC);
+    HBITMAP m_hBitMap = CreateCompatibleBitmap(hDC, g_width, g_width);
     SelectObject(memDC, m_hBitMap);
 
     PAINTSTRUCT ps;
     BeginPaint(hwnd, &ps);
 
     //绘制二维码
-    dc_MakeQr();
+    dc_MakeQr(qr);
 
     EndPaint(hwnd, &ps);
     DeleteObject(m_hBitMap);
@@ -194,20 +188,20 @@ void dc_Paint(HWND hwnd)
 
 void dc_Page(HWND hwnd, int page)
 {
-    const char* text = txtPages[page].c_str();
+    const char* text = g_pages[page].c_str();
     std::vector<QrSegment> segs = QrSegment::makeSegments(text);
-    qrCode = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
-    widthDC = qrCode.getSize() * 2 + 4 * 2;
+    QrCode qr = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
+    g_width = qr.getSize() * 2 + 4 * 2;
 
     // 生成窗口标题
     wchar_t info[256];
-    if (txtPages.size() == 1)
-        wsprintf(info, L"%d - %s", txtLen, QR_TITLE);
+    if (g_pages.size() == 1)
+        wsprintf(info, L"%d - %s", g_length, QR_TITLE);
     else
-        wsprintf(info, L"%d (%d/%d) - %s", txtLen, page + 1, txtPages.size(), QR_TITLE);
+        wsprintf(info, L"%d (%d/%d) - %s", g_length, page + 1, g_pages.size(), QR_TITLE);
     info[255] = 0;
 
-    dc_Paint(hwnd);                   // 绘制DC
+    dc_Paint(hwnd, qr);               // 绘制DC
     win_Sizing(hwnd);                 // 调整窗口大小
     SetWindowText(hwnd, info);        // 设置窗口标题
     InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
@@ -238,28 +232,28 @@ BOOL hook_Unset()
     return TRUE;                                // Hook has been removed
 }
 
-void tray_Create(HWND hwnd)
+void tray_Create(HWND hwnd, NOTIFYICONDATA *nid)
 {
 #if QR_ICON
-    nid.cbSize = (DWORD)sizeof(NOTIFYICONDATA);
-    nid.hWnd = hwnd;
-    nid.uID = 1;
-    nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid.uCallbackMessage = WM_ON_TRAY;//自定义的消息 处理托盘图标事件
-    nid.hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(101));
+    nid->cbSize = (DWORD)sizeof(NOTIFYICONDATA);
+    nid->hWnd = hwnd;
+    nid->uID = 1;
+    nid->uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+    nid->uCallbackMessage = WM_ON_TRAY;//自定义的消息 处理托盘图标事件
+    nid->hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(101));
 
     g_menu = CreatePopupMenu();//生成托盘菜单
     AppendMenu(g_menu, MF_STRING, ID_EXIT, L"Exit");
 
-    wcscpy_s(nid.szTip, QR_VERSION);//鼠标放在托盘图标上时显示的文字
-    Shell_NotifyIcon(NIM_ADD, &nid);//在托盘区添加图标
+    wcscpy_s(nid->szTip, QR_VERSION);//鼠标放在托盘图标上时显示的文字
+    Shell_NotifyIcon(NIM_ADD, nid);//在托盘区添加图标
 #endif
 }
 
-void tray_Delete()
+void tray_Delete(NOTIFYICONDATA *nid)
 {
 #if QR_ICON
-    Shell_NotifyIcon(NIM_DELETE, &nid);//在托盘中删除图标
+    Shell_NotifyIcon(NIM_DELETE, nid);//在托盘中删除图标
 #endif
 }
 
@@ -304,8 +298,9 @@ HWND win_Create(PCWSTR lpWindowName, DWORD dwStyle, DWORD dwExStyle)
 
 void win_Initial(HWND hwnd)
 {
-    widthDC = qrCode.getSize() * 2 + 4 * 2;
-    dc_Paint(hwnd);                   // 绘制DC
+    QrCode qr = QrCode::encodeText("https://github.com/znsoooo/qr-desktop", QrCode::Ecc::MEDIUM);
+    g_width = qr.getSize() * 2 + 4 * 2;
+    dc_Paint(hwnd, qr);               // 绘制DC
     win_Sizing(hwnd);                 // 调整窗口大小
     InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
 }
@@ -323,7 +318,7 @@ void win_Sizing(HWND hwnd)
     RECT rw; GetWindowRect(hwnd, &rw);
 
     // 计算更新窗口大小
-    RECT r{0, 0, widthDC, widthDC};
+    RECT r{0, 0, g_width, g_width};
     AdjustWindowRect(&r, GetWindowLong(hwnd, GWL_STYLE), FALSE);
 
     // 居中放大窗口
@@ -453,11 +448,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         if (!g_show)
             return 0;
         // 按左箭头<-键查看前一页
-        if (!wParam && 0 < pageIndex && pageIndex < txtPages.size())
-            dc_Page(hwnd, --pageIndex);
+        if (!wParam && 0 < g_index && g_index < g_pages.size())
+            dc_Page(hwnd, --g_index);
         // 按右箭头->键查看后一页
-        if (wParam && -1 < pageIndex && pageIndex + 1 < txtPages.size()) // txtPages.size() - 1 可能向下越界
-            dc_Page(hwnd, ++pageIndex);
+        if (wParam && -1 < g_index && g_index + 1 < g_pages.size()) // g_pages.size() - 1 可能向下越界
+            dc_Page(hwnd, ++g_index);
         return 0;
 
     case WM_HOTKEY:
@@ -486,7 +481,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
     win_Initial(hwnd);
     ShowWindow(hwnd, g_show);
 
-    tray_Create(hwnd);
+    NOTIFYICONDATA nid;
+    tray_Create(hwnd, &nid);
     hook_Set();
     SetAutoRun();
 
@@ -498,6 +494,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
         DispatchMessage(&msg);
     }
     hook_Unset();
-    tray_Delete();
+    tray_Delete(&nid);
     return 0;
 }
