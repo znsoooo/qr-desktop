@@ -3,53 +3,49 @@
 #include <vector>
 #include "qrcodegen.h"
 
-#define NOTIFICATION_TRAY_ICON_MSG (WM_USER + 0x100)
+using std::vector;
+using namespace std;
+using namespace qrcodegen;
+
+#define    QR_VERSION     L"v0.1.6"
+#define    QR_TITLE       L"QR Desktop"
+#define    QR_ICON        1
+const int  QR_PAGE_SIZE = 2000; // 1个汉字占3个字节
+
+
+HINSTANCE  g_hInstance = (HINSTANCE)GetModuleHandle(NULL);
+HWND       g_hwnd;
+HMENU      g_menu;
+HHOOK      g_hook;           // Handler of hook
+bool       g_show = QR_ICON; // 界面显示状态 默认状态可是否显示图标一致
+
+NOTIFYICONDATA nid;
+
+
+#define WM_ON_TRAY (WM_USER + 0x100)
 #define WM_QR_CODE (WM_USER + 0x110)
 #define ID_EXIT     40001
 
-LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-HWND Create(PCWSTR lpWindowName, DWORD dwStyle, DWORD dwExStyle)
-{
-    // Make parent window.
+void win_Sizing(HWND hwnd);
 
-    WNDCLASS wc_p = {0};
+//剪切板
+std::string  clipboardText;
+vector<string> txtPages;
+int     pageIndex = -1;
+int     txtLen = 0;
 
-    wc_p.lpfnWndProc   = DefWindowProc;
-    wc_p.hInstance     = GetModuleHandle(NULL);
-    wc_p.lpszClassName = L"QR Parent Class";
+//设置double buffering
+HDC hDC;
+HDC memDC;
+int widthDC;
 
-    RegisterClass(&wc_p);
-
-    HWND p_hwnd = CreateWindowEx(
-        dwExStyle, wc_p.lpszClassName, L"QR PARENT", dwStyle, 100, 100,
-        300, 200, 0, 0, NULL, 0
-    );
-
-    // Make child window. (No icon in status bar)
-
-    WNDCLASS wc = {0};
-
-    wc.lpfnWndProc   = HandleMessage;
-    wc.hInstance     = GetModuleHandle(NULL);
-    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
-    wc.lpszClassName = L"QR Code Class";
-
-    RegisterClass(&wc);
-
-    RECT rc = { 0, 0, 192, 192 };
-    AdjustWindowRect(&rc, dwStyle, FALSE);
-
-    HWND hwnd = CreateWindowEx(
-        dwExStyle, wc.lpszClassName, lpWindowName, dwStyle, CW_USEDEFAULT, CW_USEDEFAULT,
-        rc.right-rc.left, rc.bottom-rc.top, p_hwnd, 0, GetModuleHandle(NULL), 0
-    );
-
-    return hwnd;
-}
+QrCode qrCode = QrCode::encodeText("https://github.com/znsoooo/qr-desktop", QrCode::Ecc::MEDIUM);
 
 
-void WriteLog(const char* format, ...)
+void log(const char* format, ...)
 {
     char buf[1024];
 
@@ -71,26 +67,6 @@ void WriteLog(const char* format, ...)
     fclose(stream);
 }
 
-
-using std::vector;
-using namespace std;
-using namespace qrcodegen;
-
-#define    QR_VERSION     L"v0.1.6"
-#define    QR_TITLE       L"QR Desktop"
-#define    QR_ICON        1
-const int  QR_PAGE_SIZE = 2000; // 1个汉字占3个字节
-
-
-HINSTANCE  g_hInstance = (HINSTANCE)::GetModuleHandle(NULL);
-HWND       g_hwnd;
-NOTIFYICONDATA nid;
-HMENU      hTrayMenu;
-
-HHOOK      g_Hook;           // Handler of hook
-bool       g_show = QR_ICON; // 界面显示状态 默认状态可是否显示图标一致
-
-
 void SetAutoRun()
 {
     wchar_t mpath[256];
@@ -103,171 +79,7 @@ void SetAutoRun()
         RegCloseKey(hKey);
 }
 
-/***********  键盘钩子消息处理 *********************/
-
-#define PRESSED(key) (GetAsyncKeyState(key)&0x8000)
-
-LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
-{
-    KBDLLHOOKSTRUCT* pkh = (KBDLLHOOKSTRUCT*)lParam;
-
-    //HC_ACTION: wParam 和lParam参数包含了键盘按键消息
-    if (nCode == HC_ACTION && wParam != WM_KEYUP) // CTRL: WM_KEYDOWN/WM_KEYUP, ALT: WM_SYSKEYDOWN/WM_KEYUP
-    {
-        switch (pkh->vkCode)
-        {
-            case VK_LEFT:
-            case VK_UP:
-            case VK_PRIOR:
-            case VK_LCONTROL:
-                SendMessage(g_hwnd, WM_QR_CODE, 0, 0);
-                break;
-
-            case VK_RIGHT:
-            case VK_DOWN:
-            case VK_NEXT:
-            case VK_LMENU:
-                SendMessage(g_hwnd, WM_QR_CODE, 1, 0);
-                break;
-
-            case VK_ESCAPE:
-                SendMessage(g_hwnd, WM_CLOSE, 0, 0);
-                break;
-
-            case 'Q':
-                if (PRESSED(VK_CONTROL) && PRESSED(VK_MENU))
-                    if (!PRESSED(VK_SHIFT))
-                        SendMessage(g_hwnd, WM_HOTKEY, 0, 0);  // Ctrl-Alt-Q -> Switch
-                    else
-                        SendMessage(g_hwnd, WM_DESTROY, 0, 0); // Ctrl-Alt-Shift-Q -> Exit
-        }
-    }
-
-    // Call next hook in chain
-    return ::CallNextHookEx(g_Hook, nCode, wParam, lParam);
-}
-
-//设置键盘HOOK
-BOOL SetHook()
-{
-    if (g_hInstance && g_Hook)      // Already hooked!
-        return TRUE;
-
-    g_Hook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)KeyboardProc, g_hInstance, 0);
-    if (!g_Hook)
-    {
-        OutputDebugStringA("set keyboard hook failed.");
-        return FALSE;
-    }
-
-    return TRUE;                                // Hook has been created correctly
-}
-
-//取消键盘HOOK
-BOOL UnSetHook()
-{
-    if (g_Hook) {                               // Check if hook handler is valid
-        ::UnhookWindowsHookEx(g_Hook);          // Unhook is done here
-        g_Hook = NULL;                          // Remove hook handler to avoid to use it again
-    }
-
-    return TRUE;                                // Hook has been removed
-}
-/*************************************************/
-
-HBRUSH  hBrushBlack = CreateSolidBrush(RGB(0, 0, 0));
-HBRUSH  hBrushWhite = CreateSolidBrush(RGB(255, 255, 255));
-
-//剪切板
-std::string  clipboardText;
-vector<string> txtPages;
-int     pageIndex = -1;
-int     txtLen = 0;
-
-bool    GetClipboardTextW(int codePage);
-
-//设置double buffering
-HDC hDC;
-HDC memDC;
-int widthDC;
-
-void PaintDC(HWND hwnd);
-void OnPaint();
-void SwitchWindow(HWND hwnd);
-void UpdateWindowSize(HWND hwnd);
-
-QrCode qrCode = QrCode::encodeText("https://github.com/znsoooo/qr-desktop", QrCode::Ecc::MEDIUM);
-
-
-void initial(HWND hwnd) {
-    widthDC = qrCode.getSize() * 2 + 4 * 2;
-    PaintDC(hwnd);                    // 绘制DC
-    UpdateWindowSize(hwnd);           // 调整窗口大小
-    InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
-}
-
-void makeQrPage(HWND hwnd, int page) {
-    const char* text = txtPages[page].c_str();
-    std::vector<QrSegment> segs = QrSegment::makeSegments(text);
-    qrCode = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
-    widthDC = qrCode.getSize() * 2 + 4 * 2;
-
-    // 生成窗口标题
-    wchar_t info[256];
-    if (txtPages.size() == 1)
-        wsprintf(info, L"%d - %s", txtLen, QR_TITLE);
-    else
-        wsprintf(info, L"%d (%d/%d) - %s", txtLen, page + 1, txtPages.size(), QR_TITLE);
-    info[255] = 0;
-
-    PaintDC(hwnd);                    // 绘制DC
-    UpdateWindowSize(hwnd);           // 调整窗口大小
-    SetWindowText(hwnd, info);        // 设置窗口标题
-    InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
-}
-
-void printQr() {
-    int size = qrCode.getSize();
-    RECT rc{0, 0, widthDC, widthDC};
-    FillRect(memDC, &rc, hBrushWhite);
-
-    for (int y = 0, ry = 4; y < size; y++, ry += 2) {
-        for (int x = 0, rx = 4; x < size; x++, rx += 2) {
-            RECT rectSegment{rx, ry, rx + 2, ry + 2};
-
-            if (qrCode.getModule(x, y))
-                FillRect(memDC, &rectSegment, hBrushBlack);
-            else
-                FillRect(memDC, &rectSegment, hBrushWhite);
-        }
-    }
-}
-
-
-void PaintDC(HWND hwnd)
-{
-    hDC = GetDC(hwnd);
-    memDC = CreateCompatibleDC(hDC);
-
-    HBITMAP m_hBitMap = CreateCompatibleBitmap(hDC, widthDC, widthDC);
-    SelectObject(memDC, m_hBitMap);
-
-    PAINTSTRUCT ps;
-    BeginPaint(hwnd, &ps);
-
-    //绘制二维码
-    printQr();
-
-    EndPaint(hwnd, &ps);
-    DeleteObject(m_hBitMap);
-}
-
-void OnPaint()
-{
-    BitBlt(hDC, 0, 0, widthDC, widthDC, memDC, 0, 0, SRCCOPY);
-}
-
-bool GetClipboardTextW(int codePage)
+bool GetClipboard(int codePage)
 {
     // Try opening the clipboard
     if (!OpenClipboard(nullptr))
@@ -321,9 +133,9 @@ bool GetClipboardTextW(int codePage)
         }
     } while (*pwstr);
 
-    //WriteLog("\ntotal: %d", total);
+    //log("\ntotal: %d", total);
     //for(int k=0;k<txtPages.size() ;k++)
-    //  WriteLog("P%d = %d,", k, txtPages[k].length());
+    //  log("P%d = %d,", k, txtPages[k].length());
 
     pageIndex = 0;
 
@@ -336,69 +148,176 @@ bool GetClipboardTextW(int codePage)
     return true;
 }
 
-//生成托盘
-void ToTray(HWND hwnd)
+void OnPaint()
+{
+    BitBlt(hDC, 0, 0, widthDC, widthDC, memDC, 0, 0, SRCCOPY);
+}
+
+void dc_MakeQr()
+{
+    int size = qrCode.getSize();
+    HBRUSH black = CreateSolidBrush(RGB(0, 0, 0));
+    HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
+
+    RECT rc{0, 0, widthDC, widthDC};
+    FillRect(memDC, &rc, white);
+
+    for (int y = 0, ry = 4; y < size; y++, ry += 2) {
+        for (int x = 0, rx = 4; x < size; x++, rx += 2) {
+            RECT rectSegment{rx, ry, rx + 2, ry + 2};
+
+            if (qrCode.getModule(x, y))
+                FillRect(memDC, &rectSegment, black);
+            else
+                FillRect(memDC, &rectSegment, white);
+        }
+    }
+}
+
+void dc_Paint(HWND hwnd)
+{
+    hDC = GetDC(hwnd);
+    memDC = CreateCompatibleDC(hDC);
+
+    HBITMAP m_hBitMap = CreateCompatibleBitmap(hDC, widthDC, widthDC);
+    SelectObject(memDC, m_hBitMap);
+
+    PAINTSTRUCT ps;
+    BeginPaint(hwnd, &ps);
+
+    //绘制二维码
+    dc_MakeQr();
+
+    EndPaint(hwnd, &ps);
+    DeleteObject(m_hBitMap);
+}
+
+void dc_Page(HWND hwnd, int page)
+{
+    const char* text = txtPages[page].c_str();
+    std::vector<QrSegment> segs = QrSegment::makeSegments(text);
+    qrCode = QrCode::encodeSegments(segs, QrCode::Ecc::MEDIUM, QrCode::MIN_VERSION, QrCode::MAX_VERSION, 3, true);  // Force mask 3
+    widthDC = qrCode.getSize() * 2 + 4 * 2;
+
+    // 生成窗口标题
+    wchar_t info[256];
+    if (txtPages.size() == 1)
+        wsprintf(info, L"%d - %s", txtLen, QR_TITLE);
+    else
+        wsprintf(info, L"%d (%d/%d) - %s", txtLen, page + 1, txtPages.size(), QR_TITLE);
+    info[255] = 0;
+
+    dc_Paint(hwnd);                   // 绘制DC
+    win_Sizing(hwnd);                 // 调整窗口大小
+    SetWindowText(hwnd, info);        // 设置窗口标题
+    InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
+}
+
+BOOL hook_Set()
+{
+    if (g_hInstance && g_hook)      // Already hooked!
+        return TRUE;
+
+    g_hook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)KeyboardProc, g_hInstance, 0);
+    if (!g_hook)
+    {
+        OutputDebugStringA("set keyboard hook failed.");
+        return FALSE;
+    }
+
+    return TRUE;                                // Hook has been created correctly
+}
+
+BOOL hook_Unset()
+{
+    if (g_hook) {                               // Check if hook handler is valid
+        UnhookWindowsHookEx(g_hook);            // Unhook is done here
+        g_hook = NULL;                          // Remove hook handler to avoid to use it again
+    }
+
+    return TRUE;                                // Hook has been removed
+}
+
+void tray_Create(HWND hwnd)
 {
 #if QR_ICON
     nid.cbSize = (DWORD)sizeof(NOTIFYICONDATA);
     nid.hWnd = hwnd;
     nid.uID = 1;
     nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid.uCallbackMessage = NOTIFICATION_TRAY_ICON_MSG;//自定义的消息 处理托盘图标事件
+    nid.uCallbackMessage = WM_ON_TRAY;//自定义的消息 处理托盘图标事件
     nid.hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(101));
 
-    hTrayMenu = CreatePopupMenu();//生成托盘菜单
-    AppendMenu(hTrayMenu, MF_STRING, ID_EXIT, L"Exit");
+    g_menu = CreatePopupMenu();//生成托盘菜单
+    AppendMenu(g_menu, MF_STRING, ID_EXIT, L"Exit");
 
     wcscpy_s(nid.szTip, QR_VERSION);//鼠标放在托盘图标上时显示的文字
     Shell_NotifyIcon(NIM_ADD, &nid);//在托盘区添加图标
 #endif
 }
 
-void DeleteTray()
+void tray_Delete()
 {
 #if QR_ICON
     Shell_NotifyIcon(NIM_DELETE, &nid);//在托盘中删除图标
 #endif
 }
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+HWND win_Create(PCWSTR lpWindowName, DWORD dwStyle, DWORD dwExStyle)
 {
-    if (wcscmp(pCmdLine, L"hide") == 0)
-        g_show = 0;
+    // Make parent window.
 
-    HWND hwnd = Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_DLGMODALFRAME); // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
-    if (!hwnd)
-        return 0;
+    WNDCLASS wc_p = {0};
 
-    g_hwnd = hwnd;
-    SetWindowPos(hwnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    initial(hwnd);
-    ShowWindow(hwnd, g_show);
-    ToTray(hwnd);
+    wc_p.lpfnWndProc   = DefWindowProc;
+    wc_p.hInstance     = GetModuleHandle(NULL);
+    wc_p.lpszClassName = L"QR Parent Class";
 
-    SetHook();
-    SetAutoRun();
+    RegisterClass(&wc_p);
 
-    // Run the message loop.
-    MSG msg = { };
-    while (GetMessage(&msg, NULL, 0, 0))
-    {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-    UnSetHook();
-    return 0;
+    HWND p_hwnd = CreateWindowEx(
+        dwExStyle, wc_p.lpszClassName, L"QR PARENT", dwStyle, 100, 100,
+        300, 200, 0, 0, NULL, 0
+    );
+
+    // Make child window. (No icon in status bar)
+
+    WNDCLASS wc = {0};
+
+    wc.lpfnWndProc   = WindowProc;
+    wc.hInstance     = GetModuleHandle(NULL);
+    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
+    wc.lpszClassName = L"QR Code Class";
+
+    RegisterClass(&wc);
+
+    RECT rc = { 0, 0, 192, 192 };
+    AdjustWindowRect(&rc, dwStyle, FALSE);
+
+    HWND hwnd = CreateWindowEx(
+        dwExStyle, wc.lpszClassName, lpWindowName, dwStyle, CW_USEDEFAULT, CW_USEDEFAULT,
+        rc.right-rc.left, rc.bottom-rc.top, p_hwnd, 0, GetModuleHandle(NULL), 0
+    );
+
+    return hwnd;
 }
 
-void SwitchWindow(HWND hwnd)
+void win_Initial(HWND hwnd)
+{
+    widthDC = qrCode.getSize() * 2 + 4 * 2;
+    dc_Paint(hwnd);                   // 绘制DC
+    win_Sizing(hwnd);                 // 调整窗口大小
+    InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
+}
+
+void win_Switch(HWND hwnd)
 {
     // 切换显示窗口
     g_show = !g_show;
     ShowWindow(hwnd, g_show ? SW_SHOW : SW_HIDE);
 }
 
-void UpdateWindowSize(HWND hwnd)
+void win_Sizing(HWND hwnd)
 {
     // 获取当前窗口大小
     RECT rw; GetWindowRect(hwnd, &rw);
@@ -416,7 +335,48 @@ void UpdateWindowSize(HWND hwnd)
         SWP_NOZORDER | SWP_NOACTIVATE); // 不捕获窗口热点
 }
 
-LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+    KBDLLHOOKSTRUCT* pkh = (KBDLLHOOKSTRUCT*)lParam;
+
+    //HC_ACTION: wParam 和lParam参数包含了键盘按键消息
+    if (nCode == HC_ACTION && wParam != WM_KEYUP) // CTRL: WM_KEYDOWN/WM_KEYUP, ALT: WM_SYSKEYDOWN/WM_KEYUP
+    {
+        switch (pkh->vkCode)
+        {
+            case VK_LEFT:
+            case VK_UP:
+            case VK_PRIOR:
+            case VK_LCONTROL:
+                SendMessage(g_hwnd, WM_QR_CODE, 0, 0);
+                break;
+
+            case VK_RIGHT:
+            case VK_DOWN:
+            case VK_NEXT:
+            case VK_LMENU:
+                SendMessage(g_hwnd, WM_QR_CODE, 1, 0);
+                break;
+
+            case VK_ESCAPE:
+                SendMessage(g_hwnd, WM_CLOSE, 0, 0);
+                break;
+
+            case 'Q':
+                #define PRESSED(key) (GetAsyncKeyState(key)&0x8000)
+                if (PRESSED(VK_CONTROL) && PRESSED(VK_MENU))
+                    if (!PRESSED(VK_SHIFT))
+                        SendMessage(g_hwnd, WM_HOTKEY, 0, 0);  // Ctrl-Alt-Q -> Switch
+                    else
+                        SendMessage(g_hwnd, WM_DESTROY, 0, 0); // Ctrl-Alt-Shift-Q -> Exit
+        }
+    }
+
+    // Call next hook in chain
+    return CallNextHookEx(g_hook, nCode, wParam, lParam);
+}
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     static HWND hwndNextViewer;
     int width;
@@ -438,15 +398,14 @@ LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
         break;
 
     case WM_DESTROY:
-        DeleteTray();
         ChangeClipboardChain(hwnd, hwndNextViewer);
         PostQuitMessage(0);
         return 0;
 
     case WM_DRAWCLIPBOARD:  // clipboard contents changed.
         //系统是UTF-16，转换可选CP_ACP（相当于转GBK） 或 CP_UTF8（无损转换)
-        if(GetClipboardTextW(CP_UTF8))
-            makeQrPage(hwnd, 0);
+        if(GetClipboard(CP_UTF8))
+            dc_Page(hwnd, 0);
 
         SendMessage(hwndNextViewer, uMsg, wParam, lParam);
         break;
@@ -455,7 +414,7 @@ LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
         OnPaint();
         return 0;
 
-    case NOTIFICATION_TRAY_ICON_MSG:
+    case WM_ON_TRAY:
         // This is a message that originated with the
         // Notification Tray Icon. The lParam tells use exactly which event
         // it is.
@@ -463,7 +422,7 @@ LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
         {
             case WM_LBUTTONDBLCLK:
             {
-                SwitchWindow(hwnd);
+                win_Switch(hwnd);
                 break;
             }
             case WM_RBUTTONDOWN:
@@ -478,7 +437,7 @@ LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
                 //EnableMenuItem(hMenu, ID_SHOW, MF_GRAYED);
 
                 //显示并获取选中的菜单
-                int cmd = TrackPopupMenu(hTrayMenu, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, 0);
+                int cmd = TrackPopupMenu(g_menu, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, 0);
                 if (cmd == ID_EXIT)
                     PostMessage(hwnd, WM_DESTROY, 0, 0);
             }
@@ -486,7 +445,6 @@ LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
         break;
 
     case WM_CLOSE:
-        ToTray(hwnd);
         ShowWindow(hwnd, SW_HIDE);
         g_show = 0;
         return 0;
@@ -496,14 +454,14 @@ LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
             return 0;
         // 按左箭头<-键查看前一页
         if (!wParam && 0 < pageIndex && pageIndex < txtPages.size())
-            makeQrPage(hwnd, --pageIndex);
+            dc_Page(hwnd, --pageIndex);
         // 按右箭头->键查看后一页
         if (wParam && -1 < pageIndex && pageIndex + 1 < txtPages.size()) // txtPages.size() - 1 可能向下越界
-            makeQrPage(hwnd, ++pageIndex);
+            dc_Page(hwnd, ++pageIndex);
         return 0;
 
     case WM_HOTKEY:
-        SwitchWindow(hwnd);
+        win_Switch(hwnd);
         break;
 
     case WM_GETMINMAXINFO:
@@ -512,4 +470,34 @@ LRESULT CALLBACK HandleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
         return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+{
+    if (wcscmp(pCmdLine, L"hide") == 0)
+        g_show = 0;
+
+    HWND hwnd = win_Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_DLGMODALFRAME); // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
+    if (!hwnd)
+        return 0;
+
+    g_hwnd = hwnd;
+    SetWindowPos(hwnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    win_Initial(hwnd);
+    ShowWindow(hwnd, g_show);
+
+    tray_Create(hwnd);
+    hook_Set();
+    SetAutoRun();
+
+    // Run the message loop.
+    MSG msg = { };
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    hook_Unset();
+    tray_Delete();
+    return 0;
 }
