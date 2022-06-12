@@ -15,9 +15,9 @@ I accomplish it in __79 KB__, it working on `Windows XP` and above, compatible w
 
 ## Feature
 - The program is written by C/C++ and only size with 79 KB.
-- Copy your text and qr-code will shown in the window.
+- Use Ctrl-Alt-Q to generate qr-code by copied text.
 - Long text separate into pages and use PgUp / PgDn to flip.
-- Double click icon in tray or use Ctrl-Alt-Q to hiding or showing window.
+- Double click the tray icon to switch shown the window.
 - Use Ctrl-Alt-Shift-Q to quit.
 - Working on Windows XP and above.
 
