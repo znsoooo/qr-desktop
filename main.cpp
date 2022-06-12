@@ -31,6 +31,7 @@ void win_Sizing(HWND hwnd);
 
 //剪切板
 vector<string> g_pages;
+int g_seq    = 0;
 int g_index  = -1;
 int g_length = 0;
 int g_width  = 0;
@@ -73,25 +74,34 @@ void SetAutoRun()
         RegCloseKey(hKey);
 }
 
-bool GetClipboard(int codePage)
+bool GetClipboard()
 {
+    int codePage = CP_UTF8; //系统是 UTF-16, 转换可选 CP_ACP(相当于转GBK) 或 CP_UTF8(无损转换)
+
     // Try opening the clipboard
-    if (!OpenClipboard(nullptr))
+    if (!OpenClipboard(NULL))
         return false;
+
+    // Get clipboard last changed
+    int seq = GetClipboardSequenceNumber();
+    if (seq == g_seq)
+    {
+        CloseClipboard();
+        return false;
+    }
+    g_seq = seq;
 
     // Get handle of clipboard object for ANSI text
     HANDLE hData = GetClipboardData(CF_UNICODETEXT);
-    if (hData == nullptr)
+    if (hData == NULL)
     {
         CloseClipboard();
         return false;
     }
 
     // Lock the handle to get the actual text pointer
-    // char * pszText = static_cast<char*>(GlobalLock(hData));
-
     wchar_t * pwstr = (wchar_t*)GlobalLock(hData);
-    if (pwstr == nullptr || !*pwstr) // 或剪切板文本为空
+    if (pwstr == NULL || !*pwstr) // 或剪切板文本为空
     {
         GlobalUnlock(hData);
         CloseClipboard();
@@ -303,7 +313,7 @@ void win_Switch(HWND hwnd)
 {
     // 切换显示窗口
     g_show = !g_show;
-    ShowWindow(hwnd, g_show ? SW_SHOW : SW_HIDE);
+    ShowWindow(hwnd, g_show);
 }
 
 void win_Sizing(HWND hwnd)
@@ -367,37 +377,18 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    static HWND hwndNextViewer;
-    int width;
-
     switch (uMsg)
     {
     case WM_CREATE:
-        // Add the window to the clipboard viewer chain.
-        hwndNextViewer = SetClipboardViewer(hwnd);
+        if(GetClipboard())
+            dc_Page(hwnd, 0);
+        else
+            dc_Page(hwnd, -1);
         return 0;
-
-    case WM_CHANGECBCHAIN:
-        // If the next window is closing, repair the chain.
-        if ((HWND)wParam == hwndNextViewer)
-            hwndNextViewer = (HWND)lParam;
-        // Otherwise, pass the message to the next link.
-        else if (hwndNextViewer != NULL)
-            SendMessage(hwndNextViewer, uMsg, wParam, lParam);
-        break;
 
     case WM_DESTROY:
-        ChangeClipboardChain(hwnd, hwndNextViewer);
         PostQuitMessage(0);
         return 0;
-
-    case WM_DRAWCLIPBOARD:  // clipboard contents changed.
-        //系统是UTF-16，转换可选CP_ACP（相当于转GBK） 或 CP_UTF8（无损转换)
-        if(GetClipboard(CP_UTF8))
-            dc_Page(hwnd, 0);
-
-        SendMessage(hwndNextViewer, uMsg, wParam, lParam);
-        break;
 
     case WM_PAINT:
         OnPaint();
@@ -410,12 +401,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         switch (lParam)
         {
             case WM_LBUTTONDBLCLK:
-            {
                 win_Switch(hwnd);
                 break;
-            }
+
             case WM_RBUTTONDOWN:
-            {
                 //获取鼠标坐标
                 POINT pt; GetCursorPos(&pt);
 
@@ -429,18 +418,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 int cmd = TrackPopupMenu(g_menu, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, 0);
                 if (cmd == ID_EXIT)
                     PostMessage(hwnd, WM_DESTROY, 0, 0);
-            }
         }
-        break;
+        return 0;
 
     case WM_CLOSE:
-        ShowWindow(hwnd, SW_HIDE);
         g_show = 0;
+        ShowWindow(hwnd, g_show);
         return 0;
 
     case WM_QR_CODE:
         if (!g_show)
             return 0;
+
         // 按左箭头<-键查看前一页
         if (!wParam && 0 < g_index && g_index < g_pages.size())
             dc_Page(hwnd, --g_index);
@@ -450,8 +439,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_HOTKEY:
-        win_Switch(hwnd);
-        break;
+        if(GetClipboard())
+        {
+            dc_Page(hwnd, 0);
+            g_show = 1;
+            ShowWindow(hwnd, g_show);
+        }
+        else
+            win_Switch(hwnd);
+        return 0;
 
     case WM_GETMINMAXINFO:
         MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
@@ -472,7 +468,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
     g_hwnd = hwnd;
     SetWindowPos(hwnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    dc_Page(hwnd, -1);
     ShowWindow(hwnd, g_show);
 
     NOTIFYICONDATA nid;
