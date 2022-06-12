@@ -7,7 +7,7 @@
 using std::vector;
 using namespace std;
 
-#define    QR_VERSION     L"v0.1.7"
+#define    QR_VERSION     L"v0.2.0"
 #define    QR_TITLE       L"QR Desktop"
 #define    QR_ICON        1
 const int  QR_PAGE_SIZE = 2000; // 1个汉字占3个字节
