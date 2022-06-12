@@ -4,7 +4,7 @@ Monitor the `Clipboard` or make QR-Code by __hotkey__ is also not so difficult.
 People make this function in __different frameworks__.  
 Someone build it by `electron`, size __30.2 MB__, and I wrote one by `python`, size __14.1 MB__.  
 Wrote it by `C++` will be complicated, but faster, and smaller, and clean.  
-I accomplish it in __222 KB__, it working on `Windows XP` and above, compatible with `32/64-bit` system.  
+I accomplish it in __79 KB__, it working on `Windows XP` and above, compatible with `32/64-bit` system.  
 
 ## About
 - __Author:__ Lishixian
@@ -14,7 +14,7 @@ I accomplish it in __222 KB__, it working on `Windows XP` and above, compatible 
 - __License:__ GPL 2.0 License. Copyright (c) 2022 Lishixian (znsoooo). All Rights Reserved.
 
 ## Feature
-- The program is written by C++ and only size with 200+ KB.
+- The program is written by C/C++ and only size with 79 KB.
 - Copy your text and qr-code will shown in the window.
 - Long text separate into pages and use PgUp / PgDn to flip.
 - Double click icon in tray or use Ctrl-Alt-Q to hiding or showing window.
