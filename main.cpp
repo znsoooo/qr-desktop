@@ -188,7 +188,7 @@ void dc_Paint(HWND hwnd, uint8_t qr[])
 
 void dc_Page(HWND hwnd, int page)
 {
-    const char* text = g_pages[page].c_str();
+    const char* text = page < 0 ? "https://github.com/znsoooo/qr-desktop" : g_pages[page].c_str();
     uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
     uint8_t buf[qrcodegen_BUFFER_LEN_MAX];
     bool ok = qrcodegen_encodeText(text, buf, qr, qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_3, true);  // Force mask 3
@@ -196,7 +196,9 @@ void dc_Page(HWND hwnd, int page)
 
     // 生成窗口标题
     wchar_t info[256];
-    if (g_pages.size() == 1)
+    if (g_pages.size() == 0)
+        wsprintf(info, L"%s", QR_TITLE);
+    else if (g_pages.size() == 1)
         wsprintf(info, L"%d - %s", g_length, QR_TITLE);
     else
         wsprintf(info, L"%d (%d/%d) - %s", g_length, page + 1, g_pages.size(), QR_TITLE);
@@ -295,18 +297,6 @@ HWND win_Create(PCWSTR lpWindowName, DWORD dwStyle, DWORD dwExStyle)
     );
 
     return hwnd;
-}
-
-void win_Initial(HWND hwnd)
-{
-    const char *text = "https://github.com/znsoooo/qr-desktop";
-    uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
-    uint8_t buf[qrcodegen_BUFFER_LEN_MAX];
-    bool ok = qrcodegen_encodeText(text, buf, qr, qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
-    g_width = qrcodegen_getSize(qr) * 2 + 4 * 2;
-    dc_Paint(hwnd, qr);               // 绘制DC
-    win_Sizing(hwnd);                 // 调整窗口大小
-    InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
 }
 
 void win_Switch(HWND hwnd)
@@ -482,7 +472,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
     g_hwnd = hwnd;
     SetWindowPos(hwnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    win_Initial(hwnd);
+    dc_Page(hwnd, -1);
     ShowWindow(hwnd, g_show);
 
     NOTIFYICONDATA nid;
