@@ -311,9 +311,18 @@ HWND win_Create(PCWSTR lpWindowName, DWORD dwStyle, DWORD dwExStyle)
 
 void win_Switch(HWND hwnd)
 {
-    // 切换显示窗口
-    g_show = !g_show;
-    ShowWindow(hwnd, g_show);
+    if(GetClipboard())
+    {
+        dc_Page(hwnd, 0);
+        g_show = 1;
+        ShowWindow(hwnd, g_show);
+    }
+    else
+    {
+        // 切换显示窗口
+        g_show = !g_show;
+        ShowWindow(hwnd, g_show);
+    }
 }
 
 void win_Sizing(HWND hwnd)
@@ -439,14 +448,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_HOTKEY:
-        if(GetClipboard())
-        {
-            dc_Page(hwnd, 0);
-            g_show = 1;
-            ShowWindow(hwnd, g_show);
-        }
-        else
-            win_Switch(hwnd);
+        win_Switch(hwnd);
         return 0;
 
     case WM_GETMINMAXINFO:
