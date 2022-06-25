@@ -1,16 +1,14 @@
+#include <stdio.h>
 #include <windows.h>
 #include <winuser.h>
-#include <vector>
-#include <string>
 #include "qrcodegen.h"
 
-using std::vector;
-using namespace std;
 
 #define    QR_VERSION     L"v0.2.0"
 #define    QR_TITLE       L"QR Desktop"
 #define    QR_ICON        1
 const int  QR_PAGE_SIZE = 2000; // 1个汉字占3个字节
+const int  QR_PAGE_BUFF = QR_PAGE_SIZE + 8;
 
 
 HINSTANCE  g_hInstance = (HINSTANCE)GetModuleHandle(NULL);
@@ -29,8 +27,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 void win_Sizing(HWND hwnd);
 
+
+typedef struct {
+    char str[QR_PAGE_BUFF];
+} Seg;
+
 //剪切板
-vector<string> g_pages;
+int  g_size  = 0;
+Seg* g_pages = NULL;
+
 int g_seq    = 0;
 int g_index  = -1;
 int g_length = 0;
@@ -110,36 +115,37 @@ bool GetClipboard()
 
     // 清空分页
     g_length = wcslen(pwstr);
-    g_pages.clear();
+    free(g_pages);
 
     int total = WideCharToMultiByte(codePage, 0, pwstr, -1, 0, 0, NULL, NULL) - 1; // 尾部多一个 \0
-    int pages = 1 + (total - 1) / QR_PAGE_SIZE;
-    int average = total / pages; //实际估算每页字节数
-    int remain  = total % pages; //按每页average计算剩余字节
+
+    g_size  = 1 + (total - 1) / QR_PAGE_SIZE;
+    g_pages = (Seg*)malloc(g_size * sizeof(Seg));
+    memset(g_pages, 0, g_size * sizeof(Seg));
+
+    int average = total / g_size; //实际估算每页字节数
+    int remain  = total % g_size; //按每页average计算剩余字节
 
     // 分页保存文本
-    char segment[QR_PAGE_SIZE + 8];
-    int wLen = 0;
+    int page = 0;
     int chLen = 0;
-    int target = average + (g_pages.size() < remain);
+    int chLen2 = 0;
+    int target = average + (page < remain);
     do {
         //逐个宽字符累计长度
-        int c = WideCharToMultiByte(codePage, 0, pwstr++, 1, 0, 0, NULL, NULL);
+        int c = WideCharToMultiByte(codePage, 0, pwstr++, 1, &g_pages[page].str[chLen2], QR_PAGE_BUFF - chLen2, NULL, NULL);
         chLen += c;
-        wLen++;
-        if (chLen >= target)
-        {
-            int c2 = WideCharToMultiByte(codePage, 0, pwstr - wLen, wLen, segment, QR_PAGE_SIZE + 8, NULL, NULL);
-            segment[c2] = 0; // c2总是小于QR_PAGE_SIZE+8
-            g_pages.push_back(segment);
-            target += average + (g_pages.size() < remain); // 前面remain页每页多一个字节，接近平均
-            wLen = 0;
+        chLen2 += c;
+        if (chLen >= target) {
+            page++;
+            target += average + (page < remain); // 前面remain页每页多一个字节，接近平均
+            chLen2 = 0;
         }
     } while (*pwstr);
 
-    //log("\ntotal: %d", total);
-    //for(int k=0;k<g_pages.size() ;k++)
-    //  log("P%d = %d,", k, g_pages[k].length());
+    // log("total=%d, g_size=%d", total, g_size);
+    // for(int k = 0; k < g_size; k++)
+    //     log("P%d = %d", k, strlen(g_pages[k].str));
 
     g_index = 0;
 
@@ -198,7 +204,7 @@ void dc_Paint(HWND hwnd, uint8_t qr[])
 
 void dc_Page(HWND hwnd, int page)
 {
-    const char* text = page < 0 ? "https://github.com/znsoooo/qr-desktop" : g_pages[page].c_str();
+    const char* text = page < 0 ? "https://github.com/znsoooo/qr-desktop" : g_pages[page].str;
     uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
     uint8_t buf[qrcodegen_BUFFER_LEN_MAX];
     bool ok = qrcodegen_encodeText(text, buf, qr, qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_3, true);  // Force mask 3
@@ -206,12 +212,12 @@ void dc_Page(HWND hwnd, int page)
 
     // 生成窗口标题
     wchar_t info[256];
-    if (g_pages.size() == 0)
+    if (g_size == 0)
         wsprintf(info, L"%s", QR_TITLE);
-    else if (g_pages.size() == 1)
+    else if (g_size == 1)
         wsprintf(info, L"%d - %s", g_length, QR_TITLE);
     else
-        wsprintf(info, L"%d (%d/%d) - %s", g_length, page + 1, g_pages.size(), QR_TITLE);
+        wsprintf(info, L"%d (%d/%d) - %s", g_length, page + 1, g_size, QR_TITLE);
     info[255] = 0;
 
     dc_Paint(hwnd, qr);               // 绘制DC
@@ -440,10 +446,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return 0;
 
         // 按左箭头<-键查看前一页
-        if (!wParam && 0 < g_index && g_index < g_pages.size())
+        if (!wParam && 0 < g_index && g_index < g_size)
             dc_Page(hwnd, --g_index);
         // 按右箭头->键查看后一页
-        if (wParam && -1 < g_index && g_index + 1 < g_pages.size()) // g_pages.size() - 1 可能向下越界
+        if (wParam && -1 < g_index && g_index + 1 < g_size) // g_size - 1 可能向下越界
             dc_Page(hwnd, ++g_index);
         return 0;
 
