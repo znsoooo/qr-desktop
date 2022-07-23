@@ -1,3 +1,5 @@
+#define UNICODE
+
 #include <stdio.h>
 #include <windows.h>
 #include <winuser.h>
@@ -169,12 +171,12 @@ void dc_MakeQr(uint8_t qr[])
     HBRUSH black = CreateSolidBrush(RGB(0, 0, 0));
     HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
 
-    RECT rc{0, 0, g_width, g_width};
+    RECT rc = {0, 0, g_width, g_width};
     FillRect(memDC, &rc, white);
 
     for (int y = 0, ry = 4; y < size; y++, ry += 2) {
         for (int x = 0, rx = 4; x < size; x++, rx += 2) {
-            RECT rectSegment{rx, ry, rx + 2, ry + 2};
+            RECT rectSegment = {rx, ry, rx + 2, ry + 2};
 
             if (qrcodegen_getModule(qr, x, y))
                 FillRect(memDC, &rectSegment, black);
@@ -264,7 +266,7 @@ void tray_Create(HWND hwnd, NOTIFYICONDATA *nid)
     g_menu = CreatePopupMenu();//生成托盘菜单
     AppendMenu(g_menu, MF_STRING, ID_EXIT, L"Exit");
 
-    wcscpy_s(nid->szTip, QR_VERSION);//鼠标放在托盘图标上时显示的文字
+    wcscpy(nid->szTip, QR_VERSION);//鼠标放在托盘图标上时显示的文字
     Shell_NotifyIcon(NIM_ADD, nid);//在托盘区添加图标
 #endif
 }
@@ -337,7 +339,7 @@ void win_Sizing(HWND hwnd)
     RECT rw; GetWindowRect(hwnd, &rw);
 
     // 计算更新窗口大小
-    RECT r{0, 0, g_width, g_width};
+    RECT r = {0, 0, g_width, g_width};
     AdjustWindowRect(&r, GetWindowLong(hwnd, GWL_STYLE), FALSE);
 
     // 居中放大窗口
