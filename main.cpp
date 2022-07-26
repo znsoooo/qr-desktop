@@ -1,4 +1,5 @@
 #define UNICODE
+#define WINVER 0x0500
 
 #include <stdio.h>
 #include <windows.h>
@@ -9,11 +10,11 @@
 #define    QR_VERSION     L"v0.2.0"
 #define    QR_TITLE       L"QR Desktop"
 #define    QR_ICON        1
-const int  QR_PAGE_SIZE = 2000; // 1个汉字占3个字节
-const int  QR_PAGE_BUFF = QR_PAGE_SIZE + 8;
+#define    QR_PAGE_SIZE   2000 // 1个汉字占3个字节
+#define    QR_PAGE_BUFF   QR_PAGE_SIZE + 8
 
 
-HINSTANCE  g_hInstance = (HINSTANCE)GetModuleHandle(NULL);
+HINSTANCE  g_hInstance;
 HWND       g_hwnd;
 HMENU      g_menu;
 HHOOK      g_hook;           // Handler of hook
@@ -167,6 +168,7 @@ void OnPaint()
 
 void dc_MakeQr(uint8_t qr[])
 {
+    int x, rx, y, ry;
     int size = qrcodegen_getSize(qr);
     HBRUSH black = CreateSolidBrush(RGB(0, 0, 0));
     HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
@@ -174,8 +176,8 @@ void dc_MakeQr(uint8_t qr[])
     RECT rc = {0, 0, g_width, g_width};
     FillRect(memDC, &rc, white);
 
-    for (int y = 0, ry = 4; y < size; y++, ry += 2) {
-        for (int x = 0, rx = 4; x < size; x++, rx += 2) {
+    for (y = 0, ry = 4; y < size; y++, ry += 2) {
+        for (x = 0, rx = 4; x < size; x++, rx += 2) {
             RECT rectSegment = {rx, ry, rx + 2, ry + 2};
 
             if (qrcodegen_getModule(qr, x, y))
@@ -394,6 +396,8 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    POINT pt;
+    MINMAXINFO* mmi;
     switch (uMsg)
     {
     case WM_CREATE:
@@ -423,7 +427,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
             case WM_RBUTTONDOWN:
                 //获取鼠标坐标
-                POINT pt; GetCursorPos(&pt);
+                GetCursorPos(&pt);
 
                 //解决在菜单外单击左键菜单不消失的问题
                 SetForegroundWindow(hwnd);
@@ -460,16 +464,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_GETMINMAXINFO:
-        MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
+        mmi = (MINMAXINFO*)lParam;
         mmi->ptMinTrackSize.x = 10; // 覆盖默认最小尺寸限制
         return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow)
 {
-    if (wcscmp(pCmdLine, L"hide") == 0)
+    g_hInstance = hInstance;
+    if (strcmp(pCmdLine, "hide") == 0)
         g_show = 0;
 
     HWND hwnd = win_Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_DLGMODALFRAME); // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
