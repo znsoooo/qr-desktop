@@ -48,7 +48,7 @@ int g_width  = 0;
 HDC hDC;
 HDC memDC;
 
-void log(const char* format, ...)
+void Log(const char* format, ...)
 {
     char buf[1024];
 
@@ -146,9 +146,9 @@ bool GetClipboard()
         }
     } while (*pwstr);
 
-    // log("total=%d, g_size=%d", total, g_size);
+    // Log("total=%d, g_size=%d", total, g_size);
     // for(int k = 0; k < g_size; k++)
-    //     log("P%d = %d", k, strlen(g_pages[k].str));
+    //     Log("P%d = %d", k, strlen(g_pages[k].str));
 
     g_index = 0;
 
