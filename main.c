@@ -416,9 +416,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_ON_TRAY:
-        // This is a message that originated with the
-        // Notification Tray Icon. The lParam tells use exactly which event
-        // it is.
+        // This is a message that originated with the Notification Tray Icon.
+        // The lParam tells use exactly which event it is.
         switch (lParam)
         {
             case WM_LBUTTONDBLCLK:
@@ -426,14 +425,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 break;
 
             case WM_RBUTTONDOWN:
-                //获取鼠标坐标
-                GetCursorPos(&pt);
-
-                //解决在菜单外单击左键菜单不消失的问题
-                SetForegroundWindow(hwnd);
-
-                //使菜单某项变灰
-                //EnableMenuItem(hMenu, ID_SHOW, MF_GRAYED);
+                GetCursorPos(&pt);         // 获取鼠标坐标
+                SetForegroundWindow(hwnd); // 解决在菜单外单击左键菜单不消失的问题
 
                 //显示并获取选中的菜单
                 int cmd = TrackPopupMenu(g_menu, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, 0);
