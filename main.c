@@ -72,12 +72,12 @@ void Log(const char* format, ...)
 
 void SetAutoRun()
 {
-    wchar_t mpath[256];
+    wchar_t mpath[MAX_PATH + 16] = L"\"";
     HKEY hKey;
 
-    GetModuleFileName(0, mpath, 256); // get self path
+    GetModuleFileName(0, mpath + 1, MAX_PATH); // get self path
     int ret = RegOpenKey(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
-    ret = RegSetValueEx(hKey, L"qrcode", 0, REG_SZ, (unsigned char*)wcscat(mpath, L" hide"), 256);
+    ret = RegSetValueEx(hKey, L"qrcode", 0, REG_SZ, (char*)wcscat(mpath, L"\" hide"), MAX_PATH + 16);
     if(ret == 0)
         RegCloseKey(hKey);
 }
