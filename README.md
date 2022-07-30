@@ -1,10 +1,10 @@
 # QR Desktop
 Generate a __QR-Code__ is the most simplest thing today.  
-Monitor the `Clipboard` or make QR-Code by __hotkey__ is also not so difficult.  
-People make this function in __different frameworks__.  
+Reading `Clipboard` and make QR-Code by __hotkey__ is also not so difficult.  
+People make wheels in __different frameworks__.  
 Someone build it by `electron`, size __30.2 MB__, and I wrote one by `python`, size __14.1 MB__.  
-Wrote it by `C++` will be complicated, but faster, and smaller, and clean.  
-I accomplish it in __79 KB__, it working on `Windows XP` and above, compatible with `32/64-bit` system.  
+Wrote by `C` is difficult, but minimalist and fastest, I finished it with size of __16 KB__.  
+It working on `Windows XP` and above, compatible with `32/64-bit` system.  
 
 ## About
 - __Author:__ Lishixian
@@ -14,7 +14,7 @@ I accomplish it in __79 KB__, it working on `Windows XP` and above, compatible w
 - __License:__ GPL 2.0 License. Copyright (c) 2022 Lishixian (znsoooo). All Rights Reserved.
 
 ## Feature
-- The program is written by C/C++ and only size with 79 KB.
+- The program is written only by C and size with 16 KB.
 - Use Ctrl-Alt-Q to generate qr-code by copied text.
 - Long text separate into pages and use PgUp / PgDn to flip.
 - Double click the tray icon to switch shown the window.
@@ -22,4 +22,4 @@ I accomplish it in __79 KB__, it working on `Windows XP` and above, compatible w
 - Working on Windows XP and above.
 
 ## Ref
-- QR-Code Library from: https://github.com/nayuki/QR-Code-generator
+- QR-Code Library: https://github.com/nayuki/QR-Code-generator
