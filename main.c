@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include <winuser.h>
+#include <commctrl.h>
 #include "qrcodegen.h"
 
 
@@ -48,6 +49,11 @@ int g_width  = 0;
 HDC hDC;
 HDC memDC;
 
+//气泡提示
+TOOLINFO ti = {0};
+HWND hwndTT = NULL;
+
+
 void Log(const char* format, ...)
 {
     char buf[1024];
@@ -80,6 +86,30 @@ void SetAutoRun()
     ret = RegSetValueEx(hKey, L"qrcode", 0, REG_SZ, (char*)wcscat(mpath, L"\" hide"), MAX_PATH + 16);
     if(ret == 0)
         RegCloseKey(hKey);
+}
+
+void SetToolTip(HWND hwndParent, const char *text)
+{
+    wchar_t wtext[QR_PAGE_BUFF];
+    MultiByteToWideChar(CP_UTF8, 0, text, -1, wtext, QR_PAGE_BUFF);
+
+    if (!hwndTT) {
+        hwndTT = CreateWindowEx(WS_EX_TOPMOST, TOOLTIPS_CLASS, NULL,
+                                WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
+                                CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+                                hwndParent, NULL, g_hInstance, NULL);
+
+        ti.cbSize   = sizeof(TOOLINFO) - sizeof(void*);
+        ti.uFlags   = TTF_SUBCLASS;
+        ti.hwnd     = hwndParent;
+        ti.hinst    = g_hInstance;
+
+        SendMessage(hwndTT, TTM_SETMAXTIPWIDTH, 0, 600);
+        SendMessage(hwndTT, TTM_ADDTOOL, 0, (LPARAM)&ti);
+    }
+    ti.lpszText = wtext;
+    GetClientRect(hwndParent, &ti.rect);
+    SendMessage(hwndTT, TTM_SETTOOLINFO, 0, (LPARAM)&ti);
 }
 
 bool GetClipboard()
@@ -227,6 +257,7 @@ void dc_Page(HWND hwnd, int page)
     dc_Paint(hwnd, qr);               // 绘制DC
     win_Sizing(hwnd);                 // 调整窗口大小
     SetWindowText(hwnd, info);        // 设置窗口标题
+    SetToolTip(hwnd, text);           // 设置窗口气泡(需在<调整窗口位置>之后)
     InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
 }
 
@@ -410,7 +441,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_PAINT:
         OnPaint();
-        return 0;
+        break; // 后续绘制ToolTip
 
     case WM_ON_TRAY:
         // This is a message that originated with the Notification Tray Icon.
