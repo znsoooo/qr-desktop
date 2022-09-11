@@ -10,7 +10,7 @@ It working on `Windows XP` and above, compatible with `32/64-bit` system.
 - __Author:__ Lishixian
 - __QQ:__ 11313213
 - __Email:__ lsx7@sina.com
-- __GitHub:__ https://github.com/znsoooo/qr_desktop
+- __GitHub:__ https://github.com/znsoooo/qr-desktop
 - __License:__ GPL 2.0 License. Copyright (c) 2022 Lishixian (znsoooo). All Rights Reserved.
 
 ## Feature
