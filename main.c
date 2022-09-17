@@ -261,6 +261,19 @@ void dc_Page(HWND hwnd, int page)
     InvalidateRect(hwnd, NULL, TRUE); // 重画窗口
 }
 
+void dc_Flip(HWND hwnd, int next)
+{
+    if (!g_show)
+        return;
+
+    // 按左箭头<-键查看前一页
+    if (!next && 0 < g_index && g_index < g_size)
+        dc_Page(hwnd, --g_index);
+    // 按右箭头->键查看后一页
+    if (next && -1 < g_index && g_index + 1 < g_size) // g_size - 1 可能向下越界
+        dc_Page(hwnd, ++g_index);
+}
+
 BOOL hook_Set()
 {
     if (g_hInstance && g_hook)      // Already hooked!
@@ -469,15 +482,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_QR_CODE:
-        if (!g_show)
-            return 0;
-
-        // 按左箭头<-键查看前一页
-        if (!wParam && 0 < g_index && g_index < g_size)
-            dc_Page(hwnd, --g_index);
-        // 按右箭头->键查看后一页
-        if (wParam && -1 < g_index && g_index + 1 < g_size) // g_size - 1 可能向下越界
-            dc_Page(hwnd, ++g_index);
+        dc_Flip(hwnd, wParam);
         return 0;
 
     case WM_HOTKEY:
