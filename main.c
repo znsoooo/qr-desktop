@@ -481,6 +481,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         ShowWindow(hwnd, g_show);
         return 0;
 
+    case WM_LBUTTONUP:
+        dc_Flip(hwnd, 1);
+        return 0;
+
+    case WM_RBUTTONUP:
+        dc_Flip(hwnd, 0);
+        return 0;
+
+    case WM_MBUTTONUP:
+        if(GetClipboard())
+            dc_Page(hwnd, 0);
+        return 0;
+
     case WM_QR_CODE:
         dc_Flip(hwnd, wParam);
         return 0;
