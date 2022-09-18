@@ -131,17 +131,9 @@ bool GetClipboard()
 
     // Get handle of clipboard object for ANSI text
     HANDLE hData = GetClipboardData(CF_UNICODETEXT);
-    if (hData == NULL)
+    wchar_t *pwstr = (wchar_t*)hData;
+    if (!pwstr || !*pwstr) // 或剪切板文本为空
     {
-        CloseClipboard();
-        return false;
-    }
-
-    // Lock the handle to get the actual text pointer
-    wchar_t * pwstr = (wchar_t*)GlobalLock(hData);
-    if (pwstr == NULL || !*pwstr) // 或剪切板文本为空
-    {
-        GlobalUnlock(hData);
         CloseClipboard();
         return false;
     }
@@ -181,9 +173,6 @@ bool GetClipboard()
     //     Log("P%d = %d", k, strlen(g_pages[k].str));
 
     g_index = 0;
-
-    // Release the lock
-    GlobalUnlock(hData);
 
     // Release the clipboard
     CloseClipboard();
