@@ -99,6 +99,9 @@ void SetToolTip(HWND hwndParent, const char *text)
                                 CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                                 hwndParent, NULL, g_hInstance, NULL);
 
+        // Fix unknown reason tooltip make main window no longer topmost
+        SetWindowPos(hwndParent, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
         ti.cbSize   = sizeof(TOOLINFO) - sizeof(void*);
         ti.uFlags   = TTF_SUBCLASS;
         ti.hwnd     = hwndParent;
