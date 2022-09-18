@@ -378,9 +378,11 @@ void win_Sizing(HWND hwnd)
     AdjustWindowRect(&r, GetWindowLong(hwnd, GWL_STYLE), FALSE);
 
     // 居中放大窗口
+    int x = ((rw.right + rw.left) - (r.right - r.left)) / 2;
+    int y = ((rw.bottom + rw.top) - (r.bottom - r.top)) / 2;
     SetWindowPos(hwnd, 0,
-        ((rw.right + rw.left) - (r.right - r.left)) / 2,
-        ((rw.bottom + rw.top) - (r.bottom - r.top)) / 2,
+        x < 0 ? 0 : x,
+        y < 0 ? 0 : y,
         r.right - r.left,
         r.bottom - r.top,
         SWP_NOZORDER | SWP_NOACTIVATE); // 不捕获窗口热点
