@@ -330,7 +330,7 @@ HWND win_Create(PCWSTR lpWindowName, DWORD dwStyle, DWORD dwExStyle)
 
     HWND p_hwnd = CreateWindowEx(
         dwExStyle, wc_p.lpszClassName, L"QR PARENT", dwStyle,
-        100, 100, 300, 200, 0, 0, NULL, 0
+        100, 100, 300, 300, 0, 0, NULL, 0
     );
 
     // Make child window. (No icon in status bar)
@@ -346,7 +346,7 @@ HWND win_Create(PCWSTR lpWindowName, DWORD dwStyle, DWORD dwExStyle)
 
     HWND hwnd = CreateWindowEx(
         dwExStyle, wc.lpszClassName, lpWindowName, dwStyle,
-        100, 100, 300, 200, p_hwnd, 0, NULL, 0
+        100, 100, 300, 300, p_hwnd, 0, NULL, 0
     );
 
     return hwnd;
