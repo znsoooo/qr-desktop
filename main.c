@@ -148,8 +148,7 @@ bool GetClipboard()
     int total = WideCharToMultiByte(codePage, 0, pwstr, -1, 0, 0, NULL, NULL) - 1; // 尾部多一个 \0
 
     g_size  = 1 + (total - 1) / QR_PAGE_SIZE;
-    g_pages = (Seg*)malloc(g_size * sizeof(Seg));
-    memset(g_pages, 0, g_size * sizeof(Seg));
+    g_pages = calloc(g_size, sizeof(Seg));
 
     int average = total / g_size; //实际估算每页字节数
     int remain  = total % g_size; //按每页average计算剩余字节
