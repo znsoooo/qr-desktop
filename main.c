@@ -154,20 +154,20 @@ bool GetClipboard()
     int remain  = total % g_size; //按每页average计算剩余字节
 
     // 分页保存文本
-    int page = 0;
+    int page = -1;
     int chLen = 0;
     int chLen2 = 0;
-    int target = average + (page < remain);
+    int target = 0;
     do {
-        //逐个宽字符累计长度
-        int c = WideCharToMultiByte(codePage, 0, pwstr++, 1, &g_pages[page].str[chLen2], QR_PAGE_BUFF - chLen2, NULL, NULL);
-        chLen += c;
-        chLen2 += c;
         if (chLen >= target) {
             page++;
             target += average + (page < remain); // 前面remain页每页多一个字节，接近平均
             chLen2 = 0;
         }
+        //逐个宽字符累计长度
+        int c = WideCharToMultiByte(codePage, 0, pwstr++, 1, &g_pages[page].str[chLen2], QR_PAGE_BUFF - chLen2, NULL, NULL);
+        chLen += c;
+        chLen2 += c;
     } while (*pwstr);
 
     // Log("total=%d, g_size=%d", total, g_size);
