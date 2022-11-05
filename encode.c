@@ -18,6 +18,8 @@ static char b64map[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 
 static char* b64encode(char *data, int len)
 {
+    if (!data) return 0;
+
     int len2 = (len + 2) * 4 / 3 - 1;
     char *ret = calloc(1, len2);
 
@@ -45,9 +47,10 @@ static char* b64encode(char *data, int len)
 
 static char* b64read(char *path, int max_len)
 {
+    if (!path) return 0;
+
     FILE *fp = fopen(path, "rb");
-    if (!fp)
-        return 0;
+    if (!fp) return 0;
 
     fseek(fp, 0, SEEK_END);
     int len = ftell(fp);
@@ -67,6 +70,8 @@ static char* b64read(char *path, int max_len)
 
 static char* b64basename(char *path)
 {
+    if (!path) return 0;
+
     char *file = strrchr(path, '\\');
     file = file ? file + 1 : path;
     return b64encode(file, strlen(file));
@@ -74,9 +79,11 @@ static char* b64basename(char *path)
 
 char* fileencode(char *path)
 {
+    if (!path) return 0;
+
     char *ret = 0;
     char *name = b64basename(path);
-    char *data = b64read(path, 0x100000);
+    char *data = b64read(path, 0x100000); // max 1MB
     if (name && data) {
         ret = calloc(1, strlen(name) + strlen(data) + 2);
         strcat(ret, name);
@@ -92,6 +99,8 @@ char* fileencode(char *path)
 
 static char* b64join(char *s)
 {
+    if (!s) return 0;
+
     int ret;
     int len = strlen(s) + 1;
 
@@ -161,6 +170,8 @@ static char* b64join(char *s)
 
 static char* b64decode(char *s)
 {
+    if (!s) return 0;
+
     char *ret = calloc(1, strlen(s) * 3 / 4 + 1);
     char c, k;
     char *b64chr;
@@ -189,8 +200,20 @@ static char* b64decode(char *s)
     return ret;
 }
 
+static char* find(char *data, char sp)
+{
+    if (!data) return 0;
+
+    char *ret = strchr(data, sp);
+    if (ret)
+        *ret++ = 0;
+    return ret;
+}
+
 static char* newname(char *file)
 {
+    if (!file) return 0;
+
     #define RECV_FOLDER "recv"
     char *file2 = calloc(1, strlen(file) + 16);
     system("md "RECV_FOLDER);
@@ -212,6 +235,8 @@ static char* newname(char *file)
 
 static int b64write(char *file, char *b64_data)
 {
+    if (!file || !b64_data) return 0;
+
     int len = strlen(b64_data) * 3 / 4;
     char *data = b64decode(b64_data);
     if (!data) {
@@ -230,6 +255,8 @@ static int b64write(char *file, char *b64_data)
 
 static void show(char *path)
 {
+    if (!path) return;
+
     char cmd[strlen(path) + 32];
     sprintf(cmd, "explorer /select, \"%s\"", path);
     system(cmd);
@@ -237,29 +264,19 @@ static void show(char *path)
 
 int filedecode(char *s)
 {
-    #define assert(x) if(!(x))return 0
+    if (!s) return 0;
 
-    char *s2 = b64join(s);
-    assert(s2);
-
-    char *file = s2;
-    char *data = strchr(s2, '|');
-    assert(data);
-    *data++ = 0;
-
-    char *file2 = b64decode(file);
-    log_str(file2);
-    assert(file2);
-
+    char *head = b64join(s);
+    char *data = find(head, '|');
+    char *file2 = b64decode(head);
     char *file3 = newname(file2);
-    log_str(file3);
-    assert(file3);
+    int ret = b64write(file3, data);
+    if (ret) show(file3);
 
-    if (b64write(file3, data))
-        show(file3);
-    return 1;
-
-    #undef assert
+    free(head);
+    free(file2);
+    free(file3);
+    return ret;
 }
 
 /* unit test */
