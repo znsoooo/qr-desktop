@@ -12,7 +12,7 @@
 #define    QR_TITLE       L"QR Desktop"
 #define    QR_ICON        1
 #define    QR_PAGE_SIZE   2000 // 1个汉字占3个字节
-#define    QR_PAGE_BUFF   QR_PAGE_SIZE + 8
+#define    QR_PAGE_BUFF   QR_PAGE_SIZE + 32
 
 
 HINSTANCE  g_hInstance;
@@ -169,6 +169,15 @@ bool GetClipboard()
         chLen += c;
         chLen2 += c;
     } while (*pwstr);
+
+    // 添加页码信息
+    int encode = 1;
+    Seg tmp;
+    if (encode)
+        for (int i = 0; i < g_size; i++) {
+            sprintf(tmp.str, "%d/%d:%s,", i + 1, g_size, g_pages[i].str);
+            strcpy(g_pages[i].str, tmp.str);
+        }
 
     // Log("total=%d, g_size=%d", total, g_size);
     // for(int k = 0; k < g_size; k++)
