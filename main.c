@@ -7,6 +7,9 @@
 #include <commctrl.h>
 #include "qrcodegen.h"
 
+char* fileencode(char *path);
+int   filedecode(char *s);
+
 
 #define    QR_VERSION     L"v0.2.2"
 #define    QR_TITLE       L"QR Desktop"
@@ -76,6 +79,24 @@ void Log(const char* format, ...)
     fclose(stream);
 }
 
+char* wchar2char(wchar_t *s, int codepage)
+{
+    if (!s) return 0;
+    int len = WideCharToMultiByte(codepage, 0, s, -1, 0, 0, 0, 0);
+    char *s2 = calloc(len + 1, sizeof(char));
+    WideCharToMultiByte(codepage, 0, s, -1, s2, len, 0, 0);
+    return s2;
+}
+
+wchar_t* char2wchar(char *s, int codepage)
+{
+    if (!s) return 0;
+    int len = MultiByteToWideChar(codepage, 0, s, -1, 0, 0);
+    wchar_t *s2 = calloc(len + 1, sizeof(wchar_t));
+    MultiByteToWideChar(codepage, 0, s, -1, s2, len);
+    return s2;
+}
+
 void SetAutoRun()
 {
     wchar_t mpath[MAX_PATH + 16] = L"\"";
@@ -132,14 +153,33 @@ bool GetClipboard()
     }
     g_seq = seq;
 
-    // Get handle of clipboard object for ANSI text
-    HANDLE hData = GetClipboardData(CF_UNICODETEXT);
-    wchar_t *pwstr = (wchar_t*)hData;
-    if (!pwstr || !*pwstr) // 或剪切板文本为空
-    {
+    // 读取文件或读取文本
+    HANDLE handle;
+    wchar_t *pwstr = 0, *encode = 0;
+    if (handle = GetClipboardData(CF_HDROP)) {
+        if (DragQueryFileA(handle, -1, NULL, 0) == 1) {
+            char path[MAX_PATH];
+            DragQueryFileA(handle, 0, path, MAX_PATH);
+
+            char *encode1 = fileencode(path);
+            pwstr = encode = char2wchar(encode1, CP_ACP);
+            free(encode1);
+        }
+    } else if (handle = GetClipboardData(CF_UNICODETEXT)) {
+        pwstr = (wchar_t*)handle;
+    }
+
+    // 无有效信息或文本为空
+    if (!pwstr || !*pwstr) {
         CloseClipboard();
+        free(pwstr);
         return false;
     }
+
+    // 尝试解码
+    char *str = wchar2char(pwstr, CP_ACP);
+    filedecode(str);
+    free(str);
 
     // 清空分页
     g_length = wcslen(pwstr);
@@ -171,7 +211,6 @@ bool GetClipboard()
     } while (*pwstr);
 
     // 添加页码信息
-    int encode = 1;
     Seg tmp;
     if (encode)
         for (int i = 0; i < g_size; i++) {
@@ -187,6 +226,7 @@ bool GetClipboard()
 
     // Release the clipboard
     CloseClipboard();
+    free(pwstr);
 
     return true;
 }
