@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <windows.h>
 
 #ifdef DEBUG
     #define puts(x) printf("(ln: %3d) %s\n", __LINE__, (x))
@@ -12,6 +13,7 @@
     #define log_str(x)
 #endif
 
+#define RECV_FOLDER "recv\\"
 static char b64map[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
 
 /* file encoder functions */
@@ -214,10 +216,8 @@ static char* newname(char *file)
 {
     if (!file) return 0;
 
-    #define RECV_FOLDER "recv"
     char *file2 = calloc(1, strlen(file) + 16);
-    system("md "RECV_FOLDER);
-    strcat(file2, RECV_FOLDER"\\");
+    strcat(file2, RECV_FOLDER);
     strcat(file2, file);
     log_str(file2);
 
@@ -227,10 +227,9 @@ static char* newname(char *file)
     FILE *fp;
     for (int i = 2; fp = fopen(file2, "rb"); i++) {
         fclose(fp);
-        sprintf(file2 + (ext - file) + strlen(RECV_FOLDER"\\"), "-%d%s", i, ext);
+        sprintf(file2 + (ext - file) + strlen(RECV_FOLDER), "-%d%s", i, ext);
     }
     return file2;
-    #undef RECV_FOLDER
 }
 
 static int b64write(char *file, char *b64_data)
@@ -242,6 +241,8 @@ static int b64write(char *file, char *b64_data)
     if (!data) {
         return 0;
     }
+
+    CreateDirectoryA(RECV_FOLDER, 0);
     FILE *fp = fopen(file, "wb");
     if (!fp) {
         free(data);
@@ -257,9 +258,10 @@ static void show(char *path)
 {
     if (!path) return;
 
-    char cmd[strlen(path) + 32];
-    sprintf(cmd, "explorer /select, \"%s\"", path);
-    system(cmd);
+    char args[strlen(path) + 32];
+    strcat(args, "/select, ");
+    strcat(args, path);
+    ShellExecuteA(0, "open", "explorer", args, 0, SW_SHOWNORMAL);
 }
 
 int filedecode(char *s)
