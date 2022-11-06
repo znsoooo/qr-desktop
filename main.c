@@ -166,7 +166,8 @@ bool GetClipboard()
             free(encode1);
         }
     } else if (handle = GetClipboardData(CF_UNICODETEXT)) {
-        pwstr = (wchar_t*)handle;
+        pwstr = calloc(wcslen(handle) + 1, sizeof(wchar_t));
+        wcscpy(pwstr, handle);
     }
 
     // 无有效信息或文本为空
