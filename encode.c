@@ -132,7 +132,7 @@ static char* b64join(char *s)
     int cnt3, sum3, len3 = 0;
     for (int i = 0; i < len1 - 1; i = i + len3) {
         ret = sscanf(s1 + i, "%d/%d:%[^,],%n", &cnt3, &sum3, s3, &len3);
-        if (!(ret == 3 && sum2 == sum3 && 0 < cnt3 && cnt3 <= sum3)) {
+        if (!(ret == 3 && len3 > 0 && sum2 == sum3 && 0 < cnt3 && cnt3 <= sum3)) {
             free(s1);
             free(s3);
             for (int z = 0; z < sum2; z++)
