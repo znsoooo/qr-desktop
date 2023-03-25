@@ -150,7 +150,7 @@ wchar_t* DecodeFile(char *path, int *encode)
     }
 
     // 读取文件到内存中
-    char* c_data = calloc(c_size + 1, 1); // 字符串转码时需要结尾的"\0"判断转码结束
+    char* c_data = calloc(c_size, 1);
     fread(c_data, c_size, 1, fp);
     fclose(fp);
 
@@ -158,13 +158,13 @@ wchar_t* DecodeFile(char *path, int *encode)
     int      w_size;
     wchar_t *w_data;
 
-    if (w_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c_data, -1, 0, 0)) { // decode as UTF-8
+    if (w_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c_data, c_size, 0, 0)) { // decode as UTF-8
         w_data = calloc(w_size + 1, sizeof(wchar_t));
-        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c_data, -1, w_data, w_size);
+        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c_data, c_size, w_data, w_size);
 
-    } else if (w_size = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, c_data, -1, 0, 0)) { // decode as ANSI
+    } else if (w_size = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, c_data, c_size, 0, 0)) { // decode as ANSI
         w_data = calloc(w_size + 1, sizeof(wchar_t));
-        MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, c_data, -1, w_data, w_size);
+        MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, c_data, c_size, w_data, w_size);
 
     } else {
         char *c_data2 = fileencode2(path, c_data, c_size);
