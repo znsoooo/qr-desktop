@@ -47,7 +47,7 @@ static char* b64encode(char *data, int len)
     return ret;
 }
 
-static char* b64read(char *path, int max_len)
+static char* b64read(char *path)
 {
     if (!path) return 0;
 
@@ -58,13 +58,10 @@ static char* b64read(char *path, int max_len)
     int len = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    char* ret = 0;
-    if (0 < len && len <= max_len) {
-        char *data = calloc(1, len);
-        fread(data, len, 1, fp);
-        ret = b64encode(data, len);
-        free(data);
-    }
+    char *data = calloc(1, len);
+    fread(data, len, 1, fp);
+    char* ret = b64encode(data, len);
+    free(data);
 
     fclose(fp);
     return ret;
@@ -85,15 +82,15 @@ char* fileencode(char *path)
 
     char *ret = 0;
     char *name = b64basename(path);
-    char *data = b64read(path, 0x100000); // max 1MB
+    char *data = b64read(path);
     if (name && data) {
         ret = calloc(1, strlen(name) + strlen(data) + 2);
         strcat(ret, name);
         strcat(ret, "|");
         strcat(ret, data);
-        free(name);
-        free(data);
     }
+    free(name);
+    free(data);
     return ret;
 }
 
@@ -285,7 +282,7 @@ int filedecode(char *s)
 
 #ifdef DEBUG
 
-char* fileencode(char *path);
+char* fileencode(char *p);
 int   filedecode(char *s);
 
 static void test()
