@@ -94,6 +94,22 @@ char* fileencode(char *path)
     return ret;
 }
 
+char* fileencode2(char *path, char *data, int size)
+{
+    char *ret = 0;
+    char *b64name = b64basename(path);
+    char *b64data = b64encode(data, size);
+    if (b64name && b64data) {
+        ret = calloc(1, strlen(b64name) + strlen(b64data) + 2);
+        strcat(ret, b64name);
+        strcat(ret, "|");
+        strcat(ret, b64data);
+    }
+    free(b64name);
+    free(b64data);
+    return ret;
+}
+
 /* file decoder functions */
 
 static char* b64join(char *s)

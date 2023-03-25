@@ -7,7 +7,7 @@
 #include <commctrl.h>
 #include "qrcodegen.h"
 
-char* fileencode(char *path);
+char* fileencode2(char *path, char *data, int size);
 int   filedecode(char *s);
 
 
@@ -79,24 +79,6 @@ void Log(const char* format, ...)
     fclose(stream);
 }
 
-char* wchar2char(wchar_t *s, int codepage)
-{
-    if (!s) return 0;
-    int len = WideCharToMultiByte(codepage, 0, s, -1, 0, 0, 0, 0);
-    char *s2 = calloc(len + 1, sizeof(char));
-    WideCharToMultiByte(codepage, 0, s, -1, s2, len, 0, 0);
-    return s2;
-}
-
-wchar_t* char2wchar(char *s, int codepage)
-{
-    if (!s) return 0;
-    int len = MultiByteToWideChar(codepage, 0, s, -1, 0, 0);
-    wchar_t *s2 = calloc(len + 1, sizeof(wchar_t));
-    MultiByteToWideChar(codepage, 0, s, -1, s2, len);
-    return s2;
-}
-
 void SetAutoRun()
 {
     wchar_t mpath[MAX_PATH + 16] = L"\"";
@@ -136,6 +118,67 @@ void SetToolTip(HWND hwndParent, const char *text)
     SendMessage(hwndTT, TTM_SETTOOLINFO, 0, (LPARAM)&ti);
 }
 
+char* GetCopiedFile()
+{
+    HANDLE handle;
+    if (handle = GetClipboardData(CF_HDROP)) {
+        if (DragQueryFileA(handle, -1, NULL, 0) == 1) {
+            int size = DragQueryFileA(handle, 0, 0, 0);
+            char *path = calloc(size + 1, 1);
+            DragQueryFileA(handle, 0, path, size + 1); // todo: why +1?
+            return path;
+        }
+    }
+    return 0;
+}
+
+wchar_t* DecodeFile(char *path, int *encode)
+{
+    // 打开二进制文件
+    FILE* fp = fopen(path, "rb");
+    if (!fp) {
+        return 0;
+    }
+
+    // 获取文件大小
+    fseek(fp, 0, SEEK_END);
+    size_t c_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    if (c_size == 0 || c_size > 0x100000) { // empty or more than 1MB
+        fclose(fp);
+        return 0;
+    }
+
+    // 读取文件到内存中
+    char* c_data = calloc(c_size + 1, 1); // 字符串转码时需要结尾的"\0"判断转码结束
+    fread(c_data, c_size, 1, fp);
+    fclose(fp);
+
+    // 使用UTF-8和ANSI解码
+    int      w_size;
+    wchar_t *w_data;
+
+    if (w_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c_data, -1, 0, 0)) { // decode as UTF-8
+        w_data = calloc(w_size + 1, sizeof(wchar_t));
+        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c_data, -1, w_data, w_size);
+
+    } else if (w_size = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, c_data, -1, 0, 0)) { // decode as ANSI
+        w_data = calloc(w_size + 1, sizeof(wchar_t));
+        MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, c_data, -1, w_data, w_size);
+
+    } else {
+        char *c_data2 = fileencode2(path, c_data, c_size);
+        int w_size = MultiByteToWideChar(CP_ACP, 0, c_data2, -1, 0, 0);
+        w_data = calloc(w_size + 1, sizeof(wchar_t));
+        MultiByteToWideChar(CP_ACP, 0, c_data2, -1, w_data, w_size);
+        free(c_data2);
+        *encode = 1;
+    }
+
+    free(c_data);
+    return w_data;
+}
+
 bool GetClipboard()
 {
     int codePage = CP_UTF8; //系统是 UTF-16, 转换可选 CP_ACP(相当于转GBK) 或 CP_UTF8(无损转换)
@@ -155,16 +198,12 @@ bool GetClipboard()
 
     // 读取文件或读取文本
     HANDLE handle;
-    wchar_t *pwstr = 0, *encode = 0;
-    if (handle = GetClipboardData(CF_HDROP)) {
-        if (DragQueryFileA(handle, -1, NULL, 0) == 1) {
-            char path[MAX_PATH];
-            DragQueryFileA(handle, 0, path, MAX_PATH);
-
-            char *encode1 = fileencode(path);
-            pwstr = encode = char2wchar(encode1, CP_ACP);
-            free(encode1);
-        }
+    wchar_t *pwstr = 0;
+    int encode = 0;
+    char* file = GetCopiedFile();
+    if (file) {
+        pwstr = DecodeFile(file, &encode);
+        free(file);
     } else if (handle = GetClipboardData(CF_UNICODETEXT)) {
         pwstr = calloc(wcslen(handle) + 1, sizeof(wchar_t));
         wcscpy(pwstr, handle);
@@ -178,7 +217,9 @@ bool GetClipboard()
     }
 
     // 尝试解码
-    char *str = wchar2char(pwstr, CP_ACP);
+    int size = WideCharToMultiByte(CP_ACP, 0, pwstr, -1, 0, 0, 0, 0);
+    char *str = calloc(size + 1, sizeof(char));
+    WideCharToMultiByte(CP_ACP, 0, pwstr, -1, str, size, 0, 0);
     filedecode(str);
     free(str);
 
