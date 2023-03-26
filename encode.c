@@ -275,8 +275,7 @@ static void show(char *path)
     if (!path) return;
 
     char args[strlen(path) + 32];
-    strcat(args, "/select, ");
-    strcat(args, path);
+    sprintf(args, "/select,\"%s\"", path);
     ShellExecuteA(0, "open", "explorer", args, 0, SW_SHOWNORMAL);
 }
 
