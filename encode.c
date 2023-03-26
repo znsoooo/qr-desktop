@@ -67,45 +67,48 @@ static char* b64read(char *path)
     return ret;
 }
 
-static char* b64basename(char *path)
+static char* basename(char *path)
 {
     if (!path) return 0;
 
     char *file = strrchr(path, '\\');
     file = file ? file + 1 : path;
-    return b64encode(file, strlen(file));
+    for (int i = 0; file[i]; i++)
+        if (file[i] == ',')
+            file[i] = '-';
+    return file;
 }
 
 char* fileencode(char *path)
 {
     if (!path) return 0;
 
-    char *ret = 0;
-    char *name = b64basename(path);
     char *data = b64read(path);
-    if (name && data) {
-        ret = calloc(1, strlen(name) + strlen(data) + 2);
-        strcat(ret, name);
-        strcat(ret, "|");
-        strcat(ret, data);
-    }
-    free(name);
+    if (!data) return 0;
+
+    char *name = basename(path);
+    char *ret = calloc(1, strlen(name) + strlen(data) + 2);
+    strcat(ret, name);
+    strcat(ret, "|");
+    strcat(ret, data);
+
     free(data);
     return ret;
 }
 
 char* fileencode2(char *path, char *data, int size)
 {
-    char *ret = 0;
-    char *b64name = b64basename(path);
+    if (!(path && data)) return 0;
+
     char *b64data = b64encode(data, size);
-    if (b64name && b64data) {
-        ret = calloc(1, strlen(b64name) + strlen(b64data) + 2);
-        strcat(ret, b64name);
-        strcat(ret, "|");
-        strcat(ret, b64data);
-    }
-    free(b64name);
+    if (!b64data) return 0;
+
+    char *name = basename(path);
+    char *ret = calloc(1, strlen(name) + strlen(b64data) + 2);
+    strcat(ret, name);
+    strcat(ret, "|");
+    strcat(ret, b64data);
+
     free(b64data);
     return ret;
 }
@@ -123,7 +126,7 @@ static char* b64join(char *s)
     puts("wash chars");
     char *s1 = calloc(1, len);
     for (int i = 0, j = 0; s[i]; i++)
-        if (32 < s[i] && s[i] < 128)
+        if (!strchr(" \t\r\n", s[i]))
             s1[j++] = s[i];
     int len1 = strlen(s1) + 1;
     log_str(s1);
@@ -283,14 +286,12 @@ int filedecode(char *s)
 
     char *head = b64join(s);
     char *data = find(head, '|');
-    char *file2 = b64decode(head);
-    char *file3 = newname(file2);
-    int ret = b64write(file3, data);
-    if (ret) show(file3);
+    char *file2 = newname(head);
+    int ret = b64write(file2, data);
+    if (ret) show(file2);
 
     free(head);
     free(file2);
-    free(file3);
     return ret;
 }
 
@@ -331,7 +332,7 @@ static void test()
     log_str(s2_origin);
     log_str(s2_decode);
 
-    filedecode("1/2:SGVsbG_KwL3nIS50eHQ|SGVsbG\n,2/2:9Xb3JsZCE,");
+    filedecode("1/2:Hello.txt|SGVsbG\n,2/2:9Xb3JsZCE,");
 #endif
 
 #if TEST_ENCODE && TEST_DECODE
