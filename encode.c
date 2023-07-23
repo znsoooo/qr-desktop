@@ -345,7 +345,7 @@ static void test()
     log_str(s2_origin);
     log_str(s2_decode);
 
-    filedecode("1/2:Hello.txt|SGVsbG\n,2/2:9Xb3JsZCE,");
+    filedecode("1/2:test.txt|SGVsbG, 2/2:9Xb3JsZCE,");
 #endif
 
 #if TEST_ENCODE && TEST_DECODE
