@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <windows.h>
 
 #ifdef DEBUG
@@ -228,6 +229,18 @@ static char* find(char *data, char sp)
     return ret;
 }
 
+void redir()
+{
+    char path[MAX_PATH];
+    GetModuleFileNameA(0, path, MAX_PATH);
+    char* slash = strrchr(path, '\\');
+    if (slash) {
+        slash[1] = 0;
+        chdir(path);
+        log_str(path);
+    }
+}
+
 static char* newname(char *file)
 {
     if (!file) return 0;
@@ -283,6 +296,7 @@ int filedecode(char *s)
 {
     if (!s) return 0;
 
+    redir();
     char *head = b64join(s);
     char *data = find(head, '|');
     char *file2 = newname(head);
