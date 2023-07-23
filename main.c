@@ -198,36 +198,36 @@ bool GetClipboard()
 
     // 读取文件或读取文本
     HANDLE handle;
-    wchar_t *pwstr = 0;
+    wchar_t *wstr = 0;
     int encode = 0;
     char* file = GetCopiedFile();
     if (file) {
-        pwstr = DecodeFile(file, &encode);
+        wstr = DecodeFile(file, &encode);
         free(file);
     } else if (handle = GetClipboardData(CF_UNICODETEXT)) {
-        pwstr = calloc(wcslen(handle) + 1, sizeof(wchar_t));
-        wcscpy(pwstr, handle);
+        wstr = calloc(wcslen(handle) + 1, sizeof(wchar_t));
+        wcscpy(wstr, handle);
     }
 
     // 无有效信息或文本为空
-    if (!pwstr || !*pwstr) {
+    if (!wstr || !*wstr) {
         CloseClipboard();
-        free(pwstr);
+        free(wstr);
         return false;
     }
 
     // 尝试解码
-    int size = WideCharToMultiByte(CP_ACP, 0, pwstr, -1, 0, 0, 0, 0);
+    int size = WideCharToMultiByte(CP_ACP, 0, wstr, -1, 0, 0, 0, 0);
     char *str = calloc(size + 1, sizeof(char));
-    WideCharToMultiByte(CP_ACP, 0, pwstr, -1, str, size, 0, 0);
+    WideCharToMultiByte(CP_ACP, 0, wstr, -1, str, size, 0, 0);
     filedecode(str);
     free(str);
 
     // 清空分页
-    g_length = wcslen(pwstr);
+    g_length = wcslen(wstr);
     free(g_pages);
 
-    int total = WideCharToMultiByte(codePage, 0, pwstr, -1, 0, 0, NULL, NULL) - 1; // 尾部多一个 \0
+    int total = WideCharToMultiByte(codePage, 0, wstr, -1, 0, 0, NULL, NULL) - 1; // 尾部多一个 \0
 
     g_size  = 1 + (total - 1) / QR_PAGE_SIZE;
     g_pages = calloc(g_size, sizeof(Seg));
@@ -240,6 +240,7 @@ bool GetClipboard()
     int chLen = 0;
     int chLen2 = 0;
     int target = 0;
+    wchar_t *pwstr = wstr;
     do {
         if (chLen >= target) {
             page++;
@@ -268,7 +269,7 @@ bool GetClipboard()
 
     // Release the clipboard
     CloseClipboard();
-    free(pwstr);
+    free(wstr);
 
     return true;
 }
