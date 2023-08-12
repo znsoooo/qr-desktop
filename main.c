@@ -522,8 +522,6 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    POINT pt;
-    MINMAXINFO* mmi;
     switch (uMsg)
     {
     case WM_CREATE:
@@ -550,22 +548,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     }
 
     case WM_ON_TRAY:
-        // This is a message that originated with the Notification Tray Icon.
-        // The lParam tells use exactly which event it is.
-        switch (lParam)
-        {
-            case WM_LBUTTONDBLCLK:
-                win_Switch(hwnd);
-                break;
-
-            case WM_RBUTTONDOWN:
-                GetCursorPos(&pt);         // 获取鼠标坐标
-                SetForegroundWindow(hwnd); // 解决在菜单外单击左键菜单不消失的问题
-
-                //显示并获取选中的菜单
-                int cmd = TrackPopupMenu(g_menu, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, 0);
-                if (cmd == ID_EXIT)
-                    PostMessage(hwnd, WM_DESTROY, 0, 0);
+        if (lParam == WM_LBUTTONDBLCLK) {
+            win_Switch(hwnd);
+            break;
+        } else if (lParam == WM_RBUTTONDOWN) {
+            POINT pt;
+            GetCursorPos(&pt);         // 获取鼠标坐标
+            SetForegroundWindow(hwnd); // 解决在菜单外单击左键菜单不消失的问题
+            int cmd = TrackPopupMenu(g_menu, TPM_RETURNCMD, pt.x, pt.y, 0, hwnd, 0);
+            if (cmd == ID_EXIT)
+                PostMessage(hwnd, WM_DESTROY, 0, 0);
         }
         return 0;
 
@@ -595,10 +587,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         win_Switch(hwnd);
         return 0;
 
-    case WM_GETMINMAXINFO:
+    case WM_GETMINMAXINFO: {
+        MINMAXINFO* mmi;
         mmi = (MINMAXINFO*)lParam;
         mmi->ptMinTrackSize.x = 10; // 覆盖默认最小尺寸限制
         return 0;
+    }
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
