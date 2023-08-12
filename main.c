@@ -541,6 +541,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         OnPaint();
         break; // 后续绘制ToolTip
 
+    case WM_NOTIFY: {
+        // ToolTip中连续英文字符强制换行
+        LPNMTTCUSTOMDRAW nm = (LPNMTTCUSTOMDRAW)lParam;
+        nm->nmcd.rc.right = nm->nmcd.rc.left + 600;
+        nm->uDrawFlags |= DT_EDITCONTROL;
+        return 0;
+    }
+
     case WM_ON_TRAY:
         // This is a message that originated with the Notification Tray Icon.
         // The lParam tells use exactly which event it is.
