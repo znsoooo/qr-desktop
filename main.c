@@ -541,9 +541,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_NOTIFY: {
         // ToolTip中连续英文字符强制换行
-        LPNMTTCUSTOMDRAW nm = (LPNMTTCUSTOMDRAW)lParam;
-        nm->nmcd.rc.right = nm->nmcd.rc.left + 600;
-        nm->uDrawFlags |= DT_EDITCONTROL;
+        LPNMHDR hdr = (LPNMHDR)lParam;
+        if (hdr->hwndFrom == hwndTT && hdr->code == NM_CUSTOMDRAW) {
+            LPNMTTCUSTOMDRAW nm = (LPNMTTCUSTOMDRAW)lParam;
+            if (nm->nmcd.dwDrawStage == CDDS_PREPAINT) {
+                nm->nmcd.rc.right = nm->nmcd.rc.left + SendMessage(hwndTT, TTM_GETMAXTIPWIDTH, 0, 0);
+                nm->uDrawFlags |= DT_EDITCONTROL;
+            }
+        }
         return 0;
     }
 
