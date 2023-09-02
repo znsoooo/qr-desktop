@@ -540,11 +540,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         break; // 后续绘制ToolTip
 
     case WM_NOTIFY: {
-        // ToolTip中连续英文字符强制换行
         LPNMHDR hdr = (LPNMHDR)lParam;
-        if (hdr->hwndFrom == hwndTT && hdr->code == NM_CUSTOMDRAW) {
-            LPNMTTCUSTOMDRAW nm = (LPNMTTCUSTOMDRAW)lParam;
-            if (nm->nmcd.dwDrawStage == CDDS_PREPAINT) {
+        if (hdr->hwndFrom == hwndTT) {
+            static RECT rc;
+            if (hdr->code == TTN_SHOW)
+                GetWindowRect(hwndTT, &rc);
+            if (hdr->code == NM_CUSTOMDRAW) {
+                // 右移1个像素避免鼠标经过导致气泡消失
+                SetWindowPos(hwndTT, NULL, rc.left + 1, rc.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+                // 超长连续英文字符强制换行
+                LPNMTTCUSTOMDRAW nm = (LPNMTTCUSTOMDRAW)lParam;
                 nm->nmcd.rc.right = nm->nmcd.rc.left + SendMessage(hwndTT, TTM_GETMAXTIPWIDTH, 0, 0);
                 nm->uDrawFlags |= DT_EDITCONTROL;
             }
@@ -553,10 +558,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     }
 
     case WM_ON_TRAY:
-        if (lParam == WM_LBUTTONDBLCLK) {
+        if (lParam == WM_LBUTTONDBLCLK)
             win_Switch(hwnd);
-            break;
-        } else if (lParam == WM_RBUTTONDOWN) {
+        if (lParam == WM_RBUTTONDOWN) {
             POINT pt;
             GetCursorPos(&pt);         // 获取鼠标坐标
             SetForegroundWindow(hwnd); // 解决在菜单外单击左键菜单不消失的问题
