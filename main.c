@@ -22,7 +22,7 @@ HINSTANCE  g_hInstance;
 HWND       g_hwnd;
 HMENU      g_menu;
 HHOOK      g_hook;           // Handler of hook
-bool       g_show = QR_ICON; // 界面显示状态 默认状态可是否显示图标一致
+bool       g_show = QR_ICON; // 界面显示状态 默认状态和是否显示图标一致
 
 
 #define WM_ON_TRAY (WM_USER + 0x100)
@@ -35,11 +35,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void win_Sizing(HWND hwnd);
 
 
+//剪切板
 typedef struct {
     char str[QR_PAGE_BUFF];
 } Seg;
 
-//剪切板
 int  g_size  = 0;
 Seg* g_pages = NULL;
 
@@ -57,26 +57,14 @@ TOOLINFO ti = {0};
 HWND hwndTT = NULL;
 
 
-void Log(const char* format, ...)
+#define expr(v) printf(#v"=%g\n", (float)v)
+
+void OpenConsole()
 {
-    char buf[1024];
-
-    va_list p;
-    va_start(p, format);
-    vsprintf(buf, format, p);
-    va_end(p);
-
-    const char* path = "log.txt";
-    FILE *stream;
-    if ((stream = fopen(path, "a+")) == NULL)
-    {
-        MessageBox(0, L"Could not create/open a file", L"Error", 16);
-        return ;
-    }
-    //fprintf(stream, "%s\n", buffer);
-    //fseek(stream, 0L, SEEK_END);
-    fprintf(stream, "%s\n", buf);
-    fclose(stream);
+    AllocConsole();
+    freopen("CONOUT$", "w", stdout);
+    freopen("CONOUT$", "w", stderr);
+    printf("Console:\n");
 }
 
 void SetAutoRun()
@@ -267,10 +255,6 @@ bool GetClipboard()
             sprintf(tmp.str, "%d/%d:%s,", i + 1, g_size, g_pages[i].str);
             strcpy(g_pages[i].str, tmp.str);
         }
-
-    // Log("total=%d, g_size=%d", total, g_size);
-    // for(int k = 0; k < g_size; k++)
-    //     Log("P%d = %d", k, strlen(g_pages[k].str));
 
     g_index = 0;
 
@@ -615,6 +599,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow)
 {
+    // OpenConsole(); // For debug
+
     g_hInstance = hInstance;
     if (strcmp(pCmdLine, "hide") == 0)
         g_show = 0;
