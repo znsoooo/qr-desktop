@@ -155,20 +155,27 @@ wchar_t* DecodeFile(char *path, int *encode)
     fclose(fp);
 
     // 使用UTF-8和ANSI解码
-    int      w_size;
+    int w_size;
+    int codepage = -1;
+    if (w_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c_data, c_size, 0, 0)) // decode as UTF-8
+        codepage = CP_UTF8;
+    else if (w_size = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, c_data, c_size, 0, 0)) // decode as ANSI
+        codepage = CP_ACP; // CP_ACP == 0
+
     wchar_t *w_data;
-
-    if (w_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c_data, c_size, 0, 0)) { // decode as UTF-8
-        w_data = calloc(w_size + 1, sizeof(wchar_t));
-        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c_data, c_size, w_data, w_size);
-
-    } else if (w_size = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, c_data, c_size, 0, 0)) { // decode as ANSI
-        w_data = calloc(w_size + 1, sizeof(wchar_t));
-        MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, c_data, c_size, w_data, w_size);
+    if (codepage != -1) {
+        char *name = strrchr(path, '\\');
+        name = name ? name + 1 : path;
+        int n_size = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, name, strlen(name), 0, 0);
+        w_data = calloc(n_size + w_size + 3, sizeof(wchar_t));
+        MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, name, strlen(name), w_data, n_size);
+        MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, c_data, c_size, &w_data[n_size+2], w_size);
+        w_data[n_size]   = '\n';
+        w_data[n_size+1] = '\n';
 
     } else {
         char *c_data2 = fileencode2(path, c_data, c_size);
-        int w_size = MultiByteToWideChar(CP_ACP, 0, c_data2, -1, 0, 0);
+        w_size = MultiByteToWideChar(CP_ACP, 0, c_data2, -1, 0, 0);
         w_data = calloc(w_size + 1, sizeof(wchar_t));
         MultiByteToWideChar(CP_ACP, 0, c_data2, -1, w_data, w_size);
         free(c_data2);
