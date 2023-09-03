@@ -219,7 +219,7 @@ static char* b64decode(char *s)
     return ret;
 }
 
-static char* find(char *data, char sp)
+static char* split(char *data, char sp)
 {
     if (!data) return 0;
 
@@ -298,7 +298,7 @@ int filedecode(char *s)
 
     redir();
     char *head = b64join(s);
-    char *data = find(head, '|');
+    char *data = split(head, '|');
     char *file2 = newname(head);
     int ret = b64write(file2, data);
     if (ret) show(file2);
