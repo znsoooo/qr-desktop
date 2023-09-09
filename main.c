@@ -160,6 +160,7 @@ wchar_t* DecodeFile(char *path, int *encode)
         MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, c_data, c_size, &w_data[n_size+2], w_size);
         w_data[n_size]   = '\n';
         w_data[n_size+1] = '\n';
+        filedecode(c_data); // Try to decode
 
     } else {
         char *c_data2 = fileencode2(path, c_data, c_size);
@@ -192,11 +193,11 @@ bool GetClipboard()
     g_seq = seq;
 
     // 读取文件或读取文本
-    HANDLE handle;
     wchar_t *wstr = 0;
     int encode = 0;
-    char* file = GetCopiedFile();
-    if (file) {
+    char* file;
+    HANDLE handle;
+    if (file = GetCopiedFile()) {
         wstr = DecodeFile(file, &encode);
         free(file);
     } else if (handle = GetClipboardData(CF_UNICODETEXT)) {
