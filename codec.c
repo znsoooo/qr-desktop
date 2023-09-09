@@ -90,7 +90,7 @@ char* fileencode(char *path)
     char *name = basename(path);
     char *ret = calloc(1, strlen(name) + strlen(data) + 2);
     strcat(ret, name);
-    strcat(ret, "|");
+    strcat(ret, ":");
     strcat(ret, data);
 
     free(data);
@@ -107,7 +107,7 @@ char* fileencode2(char *path, char *data, int size)
     char *name = basename(path);
     char *ret = calloc(1, strlen(name) + strlen(b64data) + 2);
     strcat(ret, name);
-    strcat(ret, "|");
+    strcat(ret, ":");
     strcat(ret, b64data);
 
     free(b64data);
@@ -298,7 +298,7 @@ int filedecode(char *s)
 
     redir();
     char *head = b64join(s);
-    char *data = split(head, '|');
+    char *data = split(head, ':');
     char *file2 = newname(head);
     int ret = b64write(file2, data);
     if (ret) show(file2);
@@ -345,7 +345,7 @@ static void test()
     log_str(s2_origin);
     log_str(s2_decode);
 
-    filedecode("1/2:test.txt|SGVsbG, 2/2:9Xb3JsZCE,");
+    filedecode("1/2:test.txt:SGVsbG, 2/2:9Xb3JsZCE,");
 #endif
 
 #if TEST_ENCODE && TEST_DECODE
