@@ -4,6 +4,10 @@
 #include <unistd.h>
 #include <windows.h>
 
+int   filedecode(char *s);
+char* fileencode(char *path);
+char* fileencode2(char *path, char *data, int size);
+
 #ifdef DEBUG
     #define puts(x) printf("(ln: %3d) %s\n", __LINE__, (x))
     #define log_num(x) printf("(ln: %3d) %s=%g\n", __LINE__, #x, (float)(x))
@@ -229,7 +233,7 @@ static char* split(char *data, char sp)
     return ret;
 }
 
-void redir()
+static void redir()
 {
     char path[MAX_PATH];
     GetModuleFileNameA(0, path, MAX_PATH);
