@@ -120,6 +120,18 @@ char* GetCopiedFile()
     return 0;
 }
 
+wchar_t* DecodeData(int codepage, char *data, int size)
+{
+    int wsize = MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, data, size, 0, 0);
+    if (wsize) {
+        wchar_t *wdata = calloc(wsize + 1, sizeof(wchar_t));
+        MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, data, size, wdata, wsize);
+        return wdata;
+    } else {
+        return 0;
+    }
+}
+
 wchar_t* DecodeFile(char *path, int *encode)
 {
     // 打开二进制文件
@@ -130,49 +142,62 @@ wchar_t* DecodeFile(char *path, int *encode)
 
     // 获取文件大小
     fseek(fp, 0, SEEK_END);
-    size_t c_size = ftell(fp);
+    size_t size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    if (c_size == 0 || c_size > 0x100000) { // empty or more than 1MB
+    if (size == 0 || size > 0x100000) { // empty or more than 1MB
         fclose(fp);
         return 0;
     }
 
     // 读取文件到内存中
-    char* c_data = calloc(c_size, 1);
-    fread(c_data, c_size, 1, fp);
+    unsigned char* data = calloc(size + 8, 1); // 保留BOM长度+字符串尾0字符
+    fread(data, size, 1, fp);
     fclose(fp);
 
-    // 使用UTF-8和ANSI解码
-    int w_size;
-    int codepage = -1;
-    if (w_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, c_data, c_size, 0, 0)) // decode as UTF-8
-        codepage = CP_UTF8;
-    else if (w_size = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, c_data, c_size, 0, 0)) // decode as ANSI
-        codepage = CP_ACP; // CP_ACP == 0
+    // 用5种编码尝试解码
+    wchar_t *wdata = 0;
+    if (!memcmp(data, "\xef\xbb\xbf", 3)) {
+        // decode as UTF-8-BOM
+        wdata = DecodeData(CP_UTF8, data + 3, size);
+    } else if (!memcmp(data, "\xff\xfe", 2) && size == 2 * wcslen((wchar_t*)data)) {
+        // decode as UTF-16-BOM-LE
+        wdata = calloc(size, 1);
+        memcpy(wdata, data + 2, size - 2);
+    } else if (!memcmp(data, "\xfe\xff", 2) && size == 2 * wcslen((wchar_t*)data)) {
+        // decode as UTF-16-BOM-BE
+        wdata = calloc(size, 1);
+        memcpy(wdata, data + 2, size - 2);
+        for (size_t i = 0; wdata[i]; i++)
+            wdata[i] = (wdata[i] << 8) | (wdata[i] >> 8);
+    } else if (wdata = DecodeData(CP_UTF8, data, size)) {
+        // decode as UTF-8
+    } else if (wdata = DecodeData(CP_ACP, data, size)) {
+        // decode as ANSI
+    }
 
-    wchar_t *w_data;
-    if (codepage != -1) {
-        char *name = strrchr(path, '\\');
-        name = name ? name + 1 : path;
-        int n_size = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, name, strlen(name), 0, 0);
-        w_data = calloc(n_size + w_size + 3, sizeof(wchar_t));
-        MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, name, strlen(name), w_data, n_size);
-        MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, c_data, c_size, &w_data[n_size+2], w_size);
-        w_data[n_size]   = '\n';
-        w_data[n_size+1] = '\n';
-        filedecode(c_data); // Try to decode
+    // 开头添加文件名
+    wchar_t *wdata2 = 0;
+    if (wdata) {
+        char *file = strrchr(path, '\\');
+        file = file ? file + 1 : path;
+        wchar_t* wfile = DecodeData(CP_ACP, file, strlen(file));
+        wdata2 = calloc(wcslen(wfile) + wcslen(wdata) + 3, sizeof(wchar_t));
+        wcscat(wdata2, wfile);
+        wcscat(wdata2, L"\n\n");
+        wcscat(wdata2, wdata);
+        free(wfile);
+        free(wdata);
+        filedecode(data); // Try to decode
 
     } else {
-        char *c_data2 = fileencode2(path, c_data, c_size);
-        w_size = MultiByteToWideChar(CP_ACP, 0, c_data2, -1, 0, 0);
-        w_data = calloc(w_size + 1, sizeof(wchar_t));
-        MultiByteToWideChar(CP_ACP, 0, c_data2, -1, w_data, w_size);
-        free(c_data2);
+        char *data2 = fileencode2(path, data, size);
+        wdata2 = DecodeData(CP_ACP, data2, -1);
+        free(data2);
         *encode = 1;
     }
 
-    free(c_data);
-    return w_data;
+    free(data);
+    return wdata2;
 }
 
 bool GetClipboard()
