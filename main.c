@@ -134,10 +134,15 @@ wchar_t* DecodeData(int codepage, char *data, int size)
 
 wchar_t* DecodeFile(char *path, int *encode)
 {
+    // 获取文件名
+    char *file = strrchr(path, '\\');
+    file = file ? file + 1 : path;
+    wchar_t* wfile = DecodeData(CP_ACP, file, strlen(file));
+
     // 打开二进制文件
     FILE* fp = fopen(path, "rb");
     if (!fp) {
-        return 0;
+        return wfile;
     }
 
     // 获取文件大小
@@ -146,7 +151,7 @@ wchar_t* DecodeFile(char *path, int *encode)
     fseek(fp, 0, SEEK_SET);
     if (size == 0 || size > 0x100000) { // empty or more than 1MB
         fclose(fp);
-        return 0;
+        return wfile;
     }
 
     // 读取文件到内存中
@@ -178,14 +183,10 @@ wchar_t* DecodeFile(char *path, int *encode)
     // 开头添加文件名
     wchar_t *wdata2 = 0;
     if (wdata) {
-        char *file = strrchr(path, '\\');
-        file = file ? file + 1 : path;
-        wchar_t* wfile = DecodeData(CP_ACP, file, strlen(file));
         wdata2 = calloc(wcslen(wfile) + wcslen(wdata) + 3, sizeof(wchar_t));
         wcscat(wdata2, wfile);
         wcscat(wdata2, L"\n\n");
         wcscat(wdata2, wdata);
-        free(wfile);
         free(wdata);
         filedecode(data); // Try to decode
 
@@ -196,6 +197,7 @@ wchar_t* DecodeFile(char *path, int *encode)
         *encode = 1;
     }
 
+    free(wfile);
     free(data);
     return wdata2;
 }
