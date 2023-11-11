@@ -8,7 +8,7 @@
 #include "qrcodegen.h"
 
 char* fileencode2(char *path, char *data, int size);
-int   filedecode(char *s);
+char* filedecodeW(wchar_t *wstr);
 
 
 #define    QR_VERSION     L"v0.3.2"
@@ -120,6 +120,16 @@ char* GetCopiedFile()
     return 0;
 }
 
+void SelectFile(char *path)
+{
+    if (path) {
+        SetForegroundWindow(g_hwnd);
+        char args[strlen(path) + 32];
+        sprintf(args, "/select,\"%s\"", path);
+        ShellExecuteA(0, "open", "explorer", args, 0, SW_SHOWNORMAL);
+    }
+}
+
 wchar_t* DecodeData(int codepage, char *data, int size)
 {
     int wsize = MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, data, size, 0, 0);
@@ -187,8 +197,11 @@ wchar_t* DecodeFile(char *path, int *encode)
         wcscat(wdata2, wfile);
         wcscat(wdata2, L"\n\n");
         wcscat(wdata2, wdata);
+
+        char *file2 = filedecodeW(wdata); // Try to decode
+        SelectFile(file2);
+        free(file2);
         free(wdata);
-        filedecode(data); // Try to decode
 
     } else {
         char *data2 = fileencode2(path, data, size);
@@ -240,11 +253,9 @@ bool GetClipboard()
     }
 
     // 尝试解码
-    int size = WideCharToMultiByte(CP_ACP, 0, wstr, -1, 0, 0, 0, 0);
-    char *str = calloc(size + 1, sizeof(char));
-    WideCharToMultiByte(CP_ACP, 0, wstr, -1, str, size, 0, 0);
-    filedecode(str);
-    free(str);
+    char *file2 = filedecodeW(wstr);
+    SelectFile(file2);
+    free(file2);
 
     // 清空分页
     g_length = wcslen(wstr);

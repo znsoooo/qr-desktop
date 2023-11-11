@@ -4,9 +4,16 @@
 #include <unistd.h>
 #include <windows.h>
 
-int   filedecode(char *s);
+
+/* define functions */
+
 char* fileencode(char *path);
 char* fileencode2(char *path, char *data, int size);
+char* filedecode(char *str);
+char* filedecodeW(wchar_t *wstr);
+
+
+/* define macro and environments */
 
 #ifdef DEBUG
     #define puts(x) printf("(ln: %3d) %s\n", __LINE__, (x))
@@ -20,6 +27,7 @@ char* fileencode2(char *path, char *data, int size);
 
 #define RECV_FOLDER "recv\\"
 static char b64map[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
+
 
 /* file encoder functions */
 
@@ -117,6 +125,7 @@ char* fileencode2(char *path, char *data, int size)
     free(b64data);
     return ret;
 }
+
 
 /* file decoder functions */
 
@@ -258,6 +267,7 @@ static char* newname(char *file)
     ext = ext ? ext : file + strlen(file);
 
     FILE *fp;
+    CreateDirectoryA(RECV_FOLDER, 0);
     for (int i = 2; fp = fopen(file2, "rb"); i++) {
         fclose(fp);
         sprintf(file2 + (ext - file) + strlen(RECV_FOLDER), "-%d%s", i, ext);
@@ -265,17 +275,16 @@ static char* newname(char *file)
     return file2;
 }
 
-static int b64write(char *file, char *b64_data)
+static char* b64write(char *file, char *b64data)
 {
-    if (!file || !b64_data) return 0;
+    if (!file || !b64data) return 0;
 
-    int len = strlen(b64_data) * 3 / 4;
-    char *data = b64decode(b64_data);
+    int len = strlen(b64data) * 3 / 4;
+    char *data = b64decode(b64data);
     if (!data) {
         return 0;
     }
 
-    CreateDirectoryA(RECV_FOLDER, 0);
     FILE *fp = fopen(file, "wb");
     if (!fp) {
         free(data);
@@ -283,41 +292,46 @@ static int b64write(char *file, char *b64_data)
     }
     fwrite(data, len, 1, fp);
     fclose(fp);
+
+    char *file2 = calloc(1, strlen(file) + 1);
+    strcpy(file2, file);
+
     free(data);
-    return 1; // success
+    return file2;
 }
 
-static void show(char *path)
+char* filedecode(char *str)
 {
-    if (!path) return;
-
-    char args[strlen(path) + 32];
-    sprintf(args, "/select,\"%s\"", path);
-    ShellExecuteA(0, "open", "explorer", args, 0, SW_SHOWNORMAL);
-}
-
-int filedecode(char *s)
-{
-    if (!s) return 0;
+    if (!str) return 0;
 
     redir();
-    char *head = b64join(s);
-    char *data = split(head, ':');
+    char *head = b64join(str);
+    char *data = split(head, ':'); // not a malloc pointer
     char *file2 = newname(head);
-    int ret = b64write(file2, data);
-    if (ret) show(file2);
+    char *file3 = b64write(file2, data);
 
     free(head);
     free(file2);
-    return ret;
+    return file3;
 }
+
+char* filedecodeW(wchar_t *wstr)
+{
+    int size = WideCharToMultiByte(CP_ACP, 0, wstr, -1, 0, 0, 0, 0);
+    char *str = calloc(size + 1, sizeof(char));
+    WideCharToMultiByte(CP_ACP, 0, wstr, -1, str, size, 0, 0);
+    char *file = filedecode(str);
+    free(str);
+    return file;
+}
+
 
 /* unit test */
 
 #ifdef DEBUG
 
 char* fileencode(char *p);
-int   filedecode(char *s);
+char* filedecode(char *s);
 
 static void test()
 {
