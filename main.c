@@ -35,7 +35,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void win_Sizing(HWND hwnd);
 
 
-//剪切板
+// 剪切板
 typedef struct {
     char str[QR_PAGE_BUFF];
 } Seg;
@@ -48,11 +48,11 @@ int g_index  = -1;
 int g_length = 0;
 int g_width  = 0;
 
-//设置double buffering
+// 设置double buffering
 HDC hDC;
 HDC memDC;
 
-//气泡提示
+// 气泡提示
 TOOLINFO ti = {0};
 HWND hwndTT = NULL;
 
@@ -217,7 +217,7 @@ wchar_t* DecodeFile(char *path, int *encode)
 
 bool GetClipboard()
 {
-    int codePage = CP_UTF8; //系统是 UTF-16, 转换可选 CP_ACP(相当于转GBK) 或 CP_UTF8(无损转换)
+    int codePage = CP_UTF8; // 系统是 UTF-16, 转换可选 CP_ACP(相当于转GBK) 或 CP_UTF8(无损转换)
 
     // Try opening the clipboard
     if (!OpenClipboard(NULL))
@@ -225,8 +225,7 @@ bool GetClipboard()
 
     // Get clipboard last changed
     int seq = GetClipboardSequenceNumber();
-    if (seq == g_seq)
-    {
+    if (seq == g_seq) {
         CloseClipboard();
         return false;
     }
@@ -266,8 +265,8 @@ bool GetClipboard()
     g_size  = 1 + (total - 1) / QR_PAGE_SIZE;
     g_pages = calloc(g_size, sizeof(Seg));
 
-    int average = total / g_size; //实际估算每页字节数
-    int remain  = total % g_size; //按每页average计算剩余字节
+    int average = total / g_size; // 实际估算每页字节数
+    int remain  = total % g_size; // 按每页average计算剩余字节
 
     // 分页保存文本
     int page = -1;
@@ -281,19 +280,20 @@ bool GetClipboard()
             target += average + (page < remain); // 前面remain页每页多一个字节，接近平均
             chLen2 = 0;
         }
-        //逐个宽字符累计长度
+        // 逐个宽字符累计长度
         int c = WideCharToMultiByte(codePage, 0, pwstr++, 1, &g_pages[page].str[chLen2], QR_PAGE_BUFF - chLen2, NULL, NULL);
         chLen += c;
         chLen2 += c;
     } while (*pwstr);
 
     // 添加页码信息
-    Seg tmp;
-    if (encode)
+    if (encode) {
+        Seg tmp;
         for (int i = 0; i < g_size; i++) {
             sprintf(tmp.str, "%d/%d:%s,", i + 1, g_size, g_pages[i].str);
             strcpy(g_pages[i].str, tmp.str);
         }
+    }
 
     g_index = 0;
 
@@ -342,7 +342,7 @@ void dc_Paint(HWND hwnd, uint8_t qr[])
     PAINTSTRUCT ps;
     BeginPaint(hwnd, &ps);
 
-    //绘制二维码
+    // 绘制二维码
     dc_MakeQr(qr);
 
     EndPaint(hwnd, &ps);
@@ -393,8 +393,7 @@ BOOL hook_Set()
         return TRUE;
 
     g_hook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)KeyboardProc, g_hInstance, 0);
-    if (!g_hook)
-    {
+    if (!g_hook) {
         OutputDebugStringA("set keyboard hook failed.");
         return FALSE;
     }
@@ -419,21 +418,21 @@ void tray_Create(HWND hwnd, NOTIFYICONDATA *nid)
     nid->hWnd = hwnd;
     nid->uID = 1;
     nid->uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid->uCallbackMessage = WM_ON_TRAY;//自定义的消息 处理托盘图标事件
+    nid->uCallbackMessage = WM_ON_TRAY; // 自定义的消息 处理托盘图标事件
     nid->hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(101));
 
-    g_menu = CreatePopupMenu();//生成托盘菜单
+    g_menu = CreatePopupMenu();         // 生成托盘菜单
     AppendMenu(g_menu, MF_STRING, ID_EXIT, L"Exit");
 
-    wcscpy(nid->szTip, QR_VERSION);//鼠标放在托盘图标上时显示的文字
-    Shell_NotifyIcon(NIM_ADD, nid);//在托盘区添加图标
+    wcscpy(nid->szTip, QR_VERSION);     // 鼠标放在托盘图标上时显示的文字
+    Shell_NotifyIcon(NIM_ADD, nid);     // 在托盘区添加图标
 #endif
 }
 
 void tray_Delete(NOTIFYICONDATA *nid)
 {
 #if QR_ICON
-    Shell_NotifyIcon(NIM_DELETE, nid);//在托盘中删除图标
+    Shell_NotifyIcon(NIM_DELETE, nid);  // 在托盘中删除图标
 #endif
 }
 
@@ -475,14 +474,11 @@ HWND win_Create(PCWSTR lpWindowName, DWORD dwStyle, DWORD dwExStyle)
 
 void win_Switch(HWND hwnd)
 {
-    if(GetClipboard())
-    {
+    if(GetClipboard()) {
         dc_Page(hwnd, 0);
         g_show = 1;
         ShowWindow(hwnd, g_show);
-    }
-    else
-    {
+    } else {
         // 切换显示窗口
         g_show = !g_show;
         ShowWindow(hwnd, g_show);
@@ -513,7 +509,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
     KBDLLHOOKSTRUCT* pkh = (KBDLLHOOKSTRUCT*)lParam;
 
-    //HC_ACTION: wParam 和lParam参数包含了键盘按键消息
+    // HC_ACTION: wParam 和 lParam 参数包含了键盘按键消息
     if (nCode == HC_ACTION && wParam != WM_KEYUP) // CTRL: WM_KEYDOWN/WM_KEYUP, ALT: WM_SYSKEYDOWN/WM_KEYUP
     {
         switch (pkh->vkCode)
@@ -659,8 +655,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     // Run the message loop.
     MSG msg = { };
-    while (GetMessage(&msg, NULL, 0, 0))
-    {
+    while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
