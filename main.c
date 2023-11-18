@@ -106,6 +106,30 @@ void SetToolTip(HWND hwndParent, const char *text)
     SendMessage(hwndTT, TTM_SETTOOLINFO, 0, (LPARAM)&ti);
 }
 
+void SelectFile(char *path)
+{
+    if (path) {
+        SetForegroundWindow(g_hwnd);
+        char args[strlen(path) + 32];
+        sprintf(args, "/select,\"%s\"", path);
+        ShellExecuteA(0, "open", "explorer", args, 0, SW_SHOWNORMAL);
+    }
+}
+
+wchar_t* GetCopiedText()
+{
+    wchar_t *handle = GetClipboardData(CF_UNICODETEXT);
+    if (handle && *handle) {
+        wchar_t *wtext = calloc(wcslen(handle) + 1, sizeof(wchar_t));
+        wcscpy(wtext, handle);
+        char *file = filedecodeW(wtext);
+        SelectFile(file);
+        free(file);
+        return wtext;
+    }
+    return 0;
+}
+
 char* GetCopiedFile()
 {
     HANDLE handle;
@@ -118,16 +142,6 @@ char* GetCopiedFile()
         }
     }
     return 0;
-}
-
-void SelectFile(char *path)
-{
-    if (path) {
-        SetForegroundWindow(g_hwnd);
-        char args[strlen(path) + 32];
-        sprintf(args, "/select,\"%s\"", path);
-        ShellExecuteA(0, "open", "explorer", args, 0, SW_SHOWNORMAL);
-    }
 }
 
 wchar_t* DecodeData(int codepage, char *data, int size)
@@ -235,26 +249,13 @@ bool GetClipboard()
     wchar_t *wstr = 0;
     int encode = 0;
     char* file;
-    HANDLE handle;
     if (file = GetCopiedFile()) {
         wstr = DecodeFile(file, &encode);
         free(file);
-    } else if (handle = GetClipboardData(CF_UNICODETEXT)) {
-        wstr = calloc(wcslen(handle) + 1, sizeof(wchar_t));
-        wcscpy(wstr, handle);
-    }
-
-    // 无有效信息或文本为空
-    if (!wstr || !*wstr) {
+    } else if (!(wstr = GetCopiedText())) {
         CloseClipboard();
-        free(wstr);
         return false;
     }
-
-    // 尝试解码
-    char *file2 = filedecodeW(wstr);
-    SelectFile(file2);
-    free(file2);
 
     // 清空分页
     g_length = wcslen(wstr);
