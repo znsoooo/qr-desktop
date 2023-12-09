@@ -89,9 +89,6 @@ void SetToolTip(HWND hwndParent, const char* text)
                                 CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                                 hwndParent, NULL, g_hins, NULL);
 
-        // Fix unknown reason tooltip make main window no longer topmost
-        SetWindowPos(hwndParent, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-
         ti.cbSize   = sizeof(TOOLINFO) - sizeof(void*);
         ti.uFlags   = TTF_SUBCLASS;
         ti.hwnd     = hwndParent;
@@ -611,10 +608,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     // Set global params
     g_hins = hInstance;
     g_show = strcmp(pCmdLine, "hide") ? g_show : 0;
-    g_hwnd = win_Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_DLGMODALFRAME); // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
+    g_hwnd = win_Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_TOPMOST | WS_EX_DLGMODALFRAME); // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
     if (!g_hwnd)
         return 0;
-    SetWindowPos(g_hwnd, HWND_TOPMOST, 200, 200, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
     ShowWindow(g_hwnd, g_show);
 
     // Create strategy
