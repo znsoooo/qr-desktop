@@ -74,7 +74,7 @@ void SetAutoRun()
 
     GetModuleFileName(0, mpath + 1, MAX_PATH); // get self path
     RegOpenKey(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", &hKey);
-    RegSetValueEx(hKey, L"qrcode", 0, REG_SZ, (char*)wcscat(mpath, L"\" hide"), MAX_PATH + 16);
+    RegSetValueEx(hKey, L"qrcode", 0, REG_SZ, (char*)wcscat(mpath, L"\" --autorun"), MAX_PATH + 16);
     RegCloseKey(hKey);
 }
 
@@ -607,7 +607,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     // Set global params
     g_hins = hInstance;
-    g_show = strcmp(pCmdLine, "hide") ? g_show : 0;
+    g_show = strcmp(pCmdLine, "--autorun") ? g_show : 0; // 带autorun参数启动时隐藏窗口
     g_hwnd = win_Create(QR_TITLE, WS_CAPTION | WS_SYSMENU, WS_EX_TOPMOST | WS_EX_DLGMODALFRAME); // WS_CAPTION | WS_POPUP WS_OVERLAPPED | WS_THICKFRAME | WS_SYSMENU | WS_EX_TOOLWINDOW
     if (!g_hwnd)
         return 0;
