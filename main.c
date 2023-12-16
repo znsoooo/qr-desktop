@@ -105,6 +105,7 @@ void SetToolTip(HWND hwndParent, const char* text)
 void SelectFile(char* path)
 {
     if (path) {
+        AttachThreadInput(GetWindowThreadProcessId(GetForegroundWindow(), NULL), GetCurrentThreadId(), TRUE); // Fix explorer cant open at top when window is shown and inactive
         SetForegroundWindow(g_hwnd);
         char args[strlen(path) + 32];
         sprintf(args, "/select,\"%s\"", path);
