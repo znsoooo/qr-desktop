@@ -11,7 +11,7 @@ char* fileencode2(char* path, char* data, int size);
 char* filedecodeW(wchar_t* wstr);
 
 
-#define    QR_VERSION     L"v0.3.2"
+#define    QR_VERSION     L"v0.3.3"
 #define    QR_TITLE       L"QR Desktop"
 #define    QR_ICON        1
 #define    QR_PAGE_SIZE   2000 // 1个汉字占3个字节
