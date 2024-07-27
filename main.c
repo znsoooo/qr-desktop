@@ -1,3 +1,22 @@
+/*
+ * QR Desktop Application
+ *
+ * Author: Li Shixian
+ * E-mail: lsx7@sina.com
+ * Website: https://github.com/znsoooo/qr-desktop
+ * License: Copyright (c) 2022-2024 Li Shixian. (GPL 2.0 License)
+ *
+ * QR-Desktop is a Windows desktop application designed to generate and display QR codes.
+ * It can read text and generate QR codes from content in the system clipboard or from
+ * copied plain text files. It uses the hotkey Ctrl-Alt-Q or double-clicking on the tray
+ * icon to generate QR codes or toggle the window's visibility.
+ *
+ * Long texts are automatically split into multiple QR codes, and users can navigate through
+ * them using keyboard shortcuts. QR-Desktop will be configured to launch automatically
+ * at system startup after the initial run.
+ */
+
+
 #define UNICODE
 #define WINVER 0x0500
 

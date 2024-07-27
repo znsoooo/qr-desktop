@@ -1,3 +1,21 @@
+/*
+ * File Base64 Codec Library (C)
+ *
+ * Author: Li Shixian
+ * E-mail: lsx7@sina.com
+ * Website: https://github.com/znsoooo/qr-desktop
+ * License: Copyright (c) 2022-2024 Li Shixian. (GPL 2.0 License)
+ *
+ * This C source file contains functions for encoding and decoding files using Base64 encoding.
+ * It provides functionality to read files, convert their contents to Base64 strings, and write
+ * Base64 strings back to files. The file encoding and decoding process is encapsulated in
+ * separate functions.
+ *
+ * The file includes a set of utility functions for Base64 encoding and decoding, file handling,
+ * path string handling, and unit tests.
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
